@@ -384,7 +384,7 @@ class SBERTEmbedder:
             self._model = SentenceTransformer(
                 self._model_name, cache_folder=self._cache_dir, device="cpu"
             )
-            self._dim = self._model.get_embedding_dimension()
+            self._dim = self._model.get_sentence_embedding_dimension()
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         self._ensure_model()
