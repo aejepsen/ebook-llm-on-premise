@@ -443,7 +443,7 @@ def gerar_sumarios_comunidades(comunidades: list[dict]) -> list[str]:
 
 Comece com RAG vetorial. Se as perguntas dos seus usuários envolvem relações entre entidades, adicione a camada de grafo. Não construa um knowledge graph porque é elegante — construa porque as perguntas exigem.
 
-No AI-Orchestrator, a camada de roteamento semântico usa Qdrant (RAG vetorial simples) porque o problema é de similaridade entre perguntas, não de relações entre entidades. Se os domínios tivessem dependências cruzadas (um pedido de vendas que verifica estoque e impacta financeiro simultaneamente), um grafo de dependências entre domínios seria justificado.
+No AI-Orchestrator, a camada de roteamento semântico usa Qdrant (RAG vetorial simples) porque o problema é de similaridade entre perguntas, não de relações entre entidades. Se os domínios tivessem dependências cruzadas (um pedido de vendas que verifica estoque é impacta financeiro simultaneamente), um grafo de dependências entre domínios seria justificado.
 
 ---
 

@@ -10,7 +10,7 @@ Por que isso importa especialmente para LLMs on-premise? Três razões:
 2. **Custo.** Modelos locais via Ollama não cobram por token. O custo é fixo: hardware + energia.
 3. **Controle.** Você decide qual modelo, qual versão, qual quantização. Se o modelo degrada, você faz rollback sem depender de terceiros.
 
-O padrão sem RAG é o chamado "closed-book": o modelo responde apenas com o que memorizou durante o treinamento. Com RAG, passamos para "open-book": o modelo consulta uma fonte de dados antes de gerar a resposta. É a diferença entre um aluno fazendo prova de memória e um aluno fazendo prova com consulta — o segundo erra menos, inventa menos, e cita fontes.
+O padrão sem RAG é o chamado "closed-book": o modelo responde apenas com o que memorizou durante o treinamento. Com RAG, passamos para "open-book": o modelo consulta uma fonte de dados antes de gerar a resposta. É a diferença entre um aluno fazendo prova de memória é um aluno fazendo prova com consulta — o segundo erra menos, inventa menos, e cita fontes.
 
 ## Arquitetura: Embed, Index, Retrieve, Generate
 

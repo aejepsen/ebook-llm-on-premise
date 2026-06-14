@@ -1,10 +1,10 @@
-# Capitulo 3 — Setup do Ambiente
+# Capítulo 3 — Setup do Ambiente
 
 ## 3.1 Requisitos de hardware
 
-Antes de instalar qualquer software, voce precisa saber o que seu hardware aguenta. Rodar um LLM e fundamentalmente diferente de rodar uma aplicacao web — o modelo precisa caber inteiro na memoria (RAM ou VRAM da GPU) e a velocidade de geracao depende diretamente do poder de processamento.
+Antes de instalar qualquer software, você precisa saber o que seu hardware aguenta. Rodar um LLM é fundamentalmente diferente de rodar uma aplicação web — o modelo precisa caber inteiro na memória (RAM ou VRAM da GPU) e a velocidade de geração depende diretamente do poder de processamento.
 
-### Tabela de recomendacoes por cenario
+### Tabela de recomendações por cenario
 
 ```
 +-------------------+----------------+----------+----------+-----------------------+
@@ -19,7 +19,7 @@ Antes de instalar qualquer software, voce precisa saber o que seu hardware aguen
 +-------------------+----------------+----------+----------+-----------------------+
 ```
 
-**Regra pratica para VRAM**: um modelo com N bilhoes de parametros em FP16 (meia precisao) precisa de aproximadamente `N * 2` GB de VRAM. Em quantizacao 4-bit, cai para aproximadamente `N * 0.5` GB.
+**Regra prática para VRAM**: um modelo com N bilhoes de parâmetros em FP16 (meia precisão) precisa de aproximadamente `N * 2` GB de VRAM. Em quantização 4-bit, cai para aproximadamente `N * 0.5` GB.
 
 ```
 Exemplos:
@@ -31,7 +31,7 @@ Exemplos:
 
 ### Disco
 
-Modelos ocupam espaco significativo em disco:
+Modelos ocupam espaço significativo em disco:
 
 ```
 - Modelo 7B (Q4):    ~4 GB
@@ -40,17 +40,17 @@ Modelos ocupam espaco significativo em disco:
 - Modelo 70B (FP16): ~140 GB
 ```
 
-Recomendacao minima: **SSD com pelo menos 100 GB livres**. HDD funciona para armazenamento, mas o tempo de carregamento do modelo sera significativamente maior.
+Recomendação mínima: **SSD com pelo menos 100 GB livres**. HDD funciona para armazenamento, mas o tempo de carregamento do modelo sera significativamente maior.
 
-### CPU-only: e possivel?
+### CPU-only: é possível?
 
-Sim, mas com expectativas realistas. Rodando um modelo 7B quantizado em 4-bit na CPU, voce obtera algo entre 2-5 tokens por segundo, dependendo do processador. Para comparacao, uma RTX 4090 gera 50-100 tokens por segundo com o mesmo modelo.
+Sim, mas com expectativas realistas. Rodando um modelo 7B quantizado em 4-bit na CPU, você obtera algo entre 2-5 tokens por segundo, dependendo do processador. Para comparação, uma RTX 4090 gera 50-100 tokens por segundo com o mesmo modelo.
 
-CPU-only serve para testes e prototipagem, nao para producao.
+CPU-only serve para testes e prototipagem, não para produção.
 
 ## 3.2 Instalando drivers NVIDIA e CUDA
 
-Se voce tem uma GPU NVIDIA, precisa de dois componentes: o **driver da GPU** e o **CUDA toolkit**.
+Se você tem uma GPU NVIDIA, precisa de dois componentes: o **driver da GPU** e o **CUDA toolkit**.
 
 ### Verificando sua GPU
 
@@ -78,7 +78,7 @@ sudo apt install nvidia-driver-555
 sudo reboot
 ```
 
-### Verificando a instalacao do driver
+### Verificando a instalação do driver
 
 ```bash
 # Verificar se o driver esta funcionando
@@ -98,7 +98,7 @@ nvidia-smi
 
 ### Instalando CUDA Toolkit
 
-O CUDA Toolkit e necessario para frameworks como PyTorch compilarem kernels GPU. A maioria das ferramentas modernas (Ollama, vLLM) ja inclui CUDA embutido, mas e bom ter instalado para desenvolvimento.
+O CUDA Toolkit é necessário para frameworks como PyTorch compilarem kernels GPU. A maioria das ferramentas modernas (Ollama, vLLM) já inclui CUDA embutido, mas e bom ter instalado para desenvolvimento.
 
 ```bash
 # Instalar CUDA Toolkit (Ubuntu 22.04/24.04)
@@ -120,13 +120,13 @@ nvcc --version
 # Saida esperada: Cuda compilation tools, release 12.5, V12.5.xxx
 ```
 
-## 3.3 Docker: por que usar, instalacao, conceitos basicos
+## 3.3 Docker: por que usar, instalação, conceitos basicos
 
 ### Por que Docker para LLMs?
 
-Docker resolve o problema classico "funciona na minha maquina". Com LLMs, as dependencias sao particularmente complexas: versoes especificas de CUDA, cuDNN, PyTorch, bibliotecas de quantizacao. Docker encapsula tudo isso em um container reprodutivel.
+Docker resolve o problema classico "funciona na minha maquina". Com LLMs, as dependencias são particularmente complexas: versões especificas de CUDA, cuDNN, PyTorch, bibliotecas de quantização. Docker encapsula tudo isso em um container reprodutível.
 
-Alem disso, ferramentas como Ollama e vLLM oferecem imagens Docker oficiais que ja vem com tudo configurado.
+Além disso, ferramentas como Ollama e vLLM oferecem imagens Docker oficiais que já vem com tudo configurado.
 
 ### Instalando Docker
 
@@ -165,7 +165,7 @@ docker run hello-world
 
 ### NVIDIA Container Toolkit (para GPU no Docker)
 
-Para que containers Docker acessem a GPU, voce precisa do NVIDIA Container Toolkit:
+Para que containers Docker acessem a GPU, você precisa do NVIDIA Container Toolkit:
 
 ```bash
 # Adicionar repositorio NVIDIA
@@ -189,11 +189,11 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.5.0-base-ubuntu22.04 nvidia-smi
 ```
 
-## 3.4 Ollama: instalacao, primeiro modelo, comandos essenciais
+## 3.4 Ollama: instalação, primeiro modelo, comandos essenciais
 
-**Ollama** e a forma mais simples de rodar LLMs localmente. Pense nele como o "Docker para modelos de linguagem" — abstrai toda a complexidade de configuracao.
+**Ollama** e a forma mais simples de rodar LLMs localmente. Pense nele como o "Docker para modelos de linguagem" — abstrai toda a complexidade de configuração.
 
-### Instalacao
+### Instalação
 
 ```bash
 # Instalacao com script oficial (Linux)
@@ -286,16 +286,16 @@ print(resposta)
 +-------------------+--------+--------+----------------------------------+
 ```
 
-## 3.5 vLLM: quando usar, instalacao, diferencas do Ollama
+## 3.5 vLLM: quando usar, instalação, diferenças do Ollama
 
-**vLLM** e um servidor de inferencia de alta performance. Enquanto Ollama e otimizado para facilidade de uso, vLLM e otimizado para **throughput** — servir muitas requisicoes simultaneas com eficiencia maxima.
+**vLLM** é um servidor de inferência de alta performance. Enquanto Ollama e otimizado para facilidade de uso, vLLM e otimizado para **throughput** — servir muitas requisicoes simultaneas com eficiência máxima.
 
 ### Quando usar vLLM em vez de Ollama
 
 - **Ollama**: desenvolvimento local, prototipagem, uso pessoal, poucos usuarios
-- **vLLM**: producao, multiplos usuarios simultaneos, alta demanda, integracao com APIs OpenAI-compatible
+- **vLLM**: produção, multiplos usuarios simultaneos, alta demanda, integração com APIs OpenAI-compatible
 
-### Diferencas tecnicas principais
+### Diferenças técnicas principais
 
 ```
 +---------------------+------------------+------------------+
@@ -313,7 +313,7 @@ print(resposta)
 +---------------------+------------------+------------------+
 ```
 
-### Instalacao do vLLM
+### Instalação do vLLM
 
 ```bash
 # Opcao 1: pip (requer CUDA instalado)
@@ -377,9 +377,9 @@ print(resposta.choices[0].message.content)
 
 ## 3.6 Python: venv, pip, jupyter — setup completo
 
-### Instalando Python (se necessario)
+### Instalando Python (se necessário)
 
-A maioria das distribuicoes Linux ja vem com Python 3. Verifique:
+A maioria das distribuicoes Linux já vem com Python 3. Verifique:
 
 ```bash
 python3 --version
@@ -444,16 +444,16 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser
 
 ## 3.7 Google Colab como alternativa
 
-Se voce nao tem GPU local, o **Google Colab** oferece acesso gratuito a GPUs T4 (16 GB de VRAM) — suficiente para rodar modelos de ate 7B.
+Se você não tem GPU local, o **Google Colab** oferece acesso gratuito a GPUs T4 (16 GB de VRAM) — suficiente para rodar modelos de até 7B.
 
-### Limitacoes do Colab gratuito
+### Limitações do Colab gratuito
 
-- Sessoes duram no maximo 12 horas (frequentemente menos)
-- GPU pode nao estar disponivel em horarios de pico
-- Disco efemero — dados sao perdidos ao encerrar a sessao
-- RAM limitada a ~12 GB (versao gratuita)
+- Sessoes duram no máximo 12 horas (frequentemente menos)
+- GPU pode não estar disponível em horarios de pico
+- Disco efemero — dados são perdidos ao encerrar a sessão
+- RAM limitada a ~12 GB (versão gratuita)
 
-### Setup basico no Colab
+### Setup básico no Colab
 
 ```python
 # Celula 1: verificar GPU disponivel
@@ -494,9 +494,9 @@ time.sleep(5)  # aguarda o servidor iniciar
 +---------------------+------------------+------------------+
 ```
 
-## 3.8 Verificando se tudo funciona: checklist de validacao
+## 3.8 Verificando se tudo funciona: checklist de validação
 
-Apos instalar tudo, execute este checklist para garantir que o ambiente esta funcional:
+Após instalar tudo, execute este checklist para garantir que o ambiente está funcional:
 
 ```bash
 #!/bin/bash
@@ -621,7 +621,7 @@ except Exception as e:
     print(f"Ollama: NAO ACESSIVEL ({e})")
 ```
 
-## 3.9 Troubleshooting: problemas comuns e solucoes
+## 3.9 Troubleshooting: problemas comuns e soluções
 
 ### Problema: `nvidia-smi` retorna erro
 
@@ -648,7 +648,7 @@ Solucoes:
   watch -n 1 nvidia-smi
 ```
 
-### Problema: Ollama lento na primeira execucao
+### Problema: Ollama lento na primeira execução
 
 ```
 Causa: modelo sendo carregado em memoria (normal)
@@ -660,7 +660,7 @@ O Ollama mantém o modelo em memoria por ~5 minutos de inatividade.
       -d '{"model":"llama3.2","keep_alive":-1}'
 ```
 
-### Problema: Docker nao acessa GPU
+### Problema: Docker não acessa GPU
 
 ```
 Causa: NVIDIA Container Toolkit nao configurado
@@ -672,7 +672,7 @@ Solucao:
   docker run --rm --gpus all nvidia/cuda:12.5.0-base-ubuntu22.04 nvidia-smi
 ```
 
-### Problema: `pip install torch` instala versao sem CUDA
+### Problema: `pip install torch` instala versão sem CUDA
 
 ```
 Causa: pip instala versao CPU por padrao
@@ -691,7 +691,7 @@ Solucoes:
   3. Usar modelos com bom suporte PT-BR: Mistral, Qwen2.5, Sabia (Maritaca AI)
 ```
 
-### Problema: vLLM nao inicia — `ValueError: model not found`
+### Problema: vLLM não inicia — `ValueError: model not found`
 
 ```
 Causa: modelo nao baixado ou nome incorreto
@@ -703,7 +703,7 @@ Solucao:
   vllm serve Qwen/Qwen2.5-7B-Instruct
 ```
 
-### Problema: permissao negada no Docker
+### Problema: permissão negada no Docker
 
 ```
 Causa: usuario nao esta no grupo docker
@@ -715,15 +715,15 @@ Solucao:
 
 ---
 
-## Resumo do capitulo
+## Resumo do capítulo
 
-- VRAM e o recurso mais critico: modelo N bilhoes de parametros em FP16 precisa de ~N*2 GB
-- Driver NVIDIA + CUDA sao pre-requisitos para uso de GPU
+- VRAM e o recurso mais critico: modelo N bilhoes de parâmetros em FP16 precisa de ~N*2 GB
+- Driver NVIDIA + CUDA são pré-requisitos para uso de GPU
 - Docker com NVIDIA Container Toolkit simplifica deploys reprodutiveis
-- Ollama e a porta de entrada: `curl | sh` + `ollama run llama3.2` e voce esta rodando
-- vLLM e para producao: continuous batching, PagedAttention, API OpenAI-compatible
+- Ollama e a porta de entrada: `curl | sh` + `ollama run llama3.2` e você está rodando
+- vLLM e para produção: continuous batching, PagedAttention, API OpenAI-compatible
 - Ambientes virtuais Python (`venv`) isolam dependencias e evitam conflitos
-- Google Colab e uma alternativa viavel para aprendizado quando nao se tem GPU
+- Google Colab é uma alternativa viável para aprendizado quando não se tem GPU
 - Sempre valide o ambiente completo antes de comecar a desenvolver
 
 ---
@@ -733,5 +733,5 @@ Solucao:
 - Iusztin, P. & Labonne, M. (2024). *LLM Engineer's Handbook*, Packt. Cap. 2: Tooling and Installation.
 - Wang, C. & Hu, P. (2025). *Hands-On LLM Serving and Optimization*, O'Reilly. Cap. 1 e 5.
 - Alammar, J. & Grootendorst, M. (2024). *Hands-On Large Language Models*, O'Reilly. Prefacio (setup Colab).
-- Notebooks de referencia: `ch02/ch2_Run_LLM_With_vLLM.ipynb`, `ch03/` (setup).
-- Documentacao oficial: [Ollama](https://ollama.com), [vLLM](https://docs.vllm.ai), [NVIDIA CUDA](https://developer.nvidia.com/cuda-toolkit).
+- Notebooks de referência: `ch02/ch2_Run_LLM_With_vLLM.ipynb`, `ch03/` (setup).
+- Documentação oficial: [Ollama](https://ollama.com), [vLLM](https://docs.vllm.ai), [NVIDIA CUDA](https://developer.nvidia.com/cuda-toolkit).

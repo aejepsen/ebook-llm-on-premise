@@ -1,36 +1,36 @@
-# Capitulo 7 -- Frameworks de Serving: Escolhendo a Ferramenta Certa
+# Capítulo 7 -- Frameworks de Serving: Escolhendo a Ferramenta Certa
 
-Voce ja entende quantizacao, KV cache, Paged Attention e speculative decoding. Agora a pergunta e: **qual framework implementa tudo isso da melhor forma para o seu cenario?** Este capitulo compara os cinco frameworks mais relevantes para servir LLMs localmente: Ollama, vLLM, llama.cpp, SGLang e TensorRT-LLM. Cada um tem forcas distintas e contextos ideais de uso.
+Você já entende quantização, KV cache, Paged Attention e speculative decoding. Agora a pergunta e: **qual framework implementa tudo isso da melhor forma para o seu cenario?** Este capítulo compara os cinco frameworks mais relevantes para servir LLMs localmente: Ollama, vLLM, llama.cpp, SGLang e TensorRT-LLM. Cada um tem forcas distintas e contextos ideais de uso.
 
 ---
 
 ## 7.1 Panorama dos frameworks
 
-O ecossistema de serving de LLMs cresceu rapidamente entre 2023 e 2026. Os frameworks diferem em backend de execucao, formatos suportados, otimizacoes implementadas e facilidade de uso.
+O ecossistema de serving de LLMs cresceu rapidamente entre 2023 e 2026. Os frameworks diferem em backend de execução, formatos suportados, otimizações implementadas e facilidade de uso.
 
 | Framework | Backend | Formato | API | GPU | CPU | Foco |
 |-----------|---------|---------|-----|-----|-----|------|
 | **Ollama** | llama.cpp | GGUF | REST proprietaria | Sim | Sim | Simplicidade |
-| **vLLM** | PyTorch | HF/GPTQ/AWQ/FP8 | OpenAI-compatible | Sim | Nao | Throughput em producao |
-| **llama.cpp** | GGML/GGUF | GGUF | Propria + OpenAI-compat. | Sim | Sim | Eficiencia em hardware limitado |
-| **SGLang** | PyTorch | HF/GPTQ/AWQ | OpenAI-compatible | Sim | Nao | Programacao estruturada + velocidade |
-| **TensorRT-LLM** | TensorRT | Checkpoints otimizados | Propria | Sim (NVIDIA only) | Nao | Performance maxima NVIDIA |
+| **vLLM** | PyTorch | HF/GPTQ/AWQ/FP8 | OpenAI-compatible | Sim | Não | Throughput em produção |
+| **llama.cpp** | GGML/GGUF | GGUF | Própria + OpenAI-compat. | Sim | Sim | Eficiência em hardware limitado |
+| **SGLang** | PyTorch | HF/GPTQ/AWQ | OpenAI-compatible | Sim | Não | Programação estruturada + velocidade |
+| **TensorRT-LLM** | TensorRT | Checkpoints otimizados | Própria | Sim (NVIDIA only) | Não | Performance máxima NVIDIA |
 
 ---
 
-## 7.2 llama.cpp: inferencia em CPU, GGUF e llama-server
+## 7.2 llama.cpp: inferência em CPU, GGUF e llama-server
 
 O llama.cpp e o projeto que democratizou LLMs locais. Escrito em C/C++, roda em praticamente qualquer hardware: CPU x86, ARM, Apple Silicon, GPUs NVIDIA, AMD e Intel.
 
 ### Caracteristicas principais
 
 - **Formato:** GGUF exclusivamente
-- **Quantizacao nativa:** Q2_K ate Q8_0, integrado no proprio runtime
+- **Quantização nativa:** Q2_K até Q8_0, integrado no próprio runtime
 - **Offloading hibrido:** parte do modelo na GPU, parte na CPU
 - **Zero dependencias Python:** binario compilado, sem PyTorch/CUDA runtime
 - **Tamanho:** binario de ~5 MB vs gigabytes dos frameworks baseados em PyTorch
 
-### Instalacao e uso basico
+### Instalação e uso básico
 
 ```bash
 # Compilar llama.cpp com suporte a CUDA
@@ -56,7 +56,7 @@ cmake --build build --config Release -j $(nproc)
 
 ### Uso via Python (llama-cpp-python)
 
-O binding Python permite integrar llama.cpp em aplicacoes:
+O binding Python permite integrar llama.cpp em aplicações:
 
 ```python
 """
@@ -98,23 +98,23 @@ print(resposta_chat["choices"][0]["message"]["content"])
 - Hardware sem GPU ou com GPU limitada (< 6 GB VRAM)
 - Apple Silicon (Mac M1/M2/M3/M4) -- excelente performance com Metal
 - Dispositivos embarcados (Raspberry Pi, Jetson)
-- Quando voce quer controle total sobre offloading CPU/GPU
+- Quando você quer controle total sobre offloading CPU/GPU
 - Quando tamanho do deploy importa (binario minusculo)
 
 ---
 
 ## 7.3 vLLM: Paged Attention, continuous batching, API OpenAI-compatible
 
-O vLLM e o framework de referencia para serving de LLMs em producao com GPUs NVIDIA. Introduziu o Paged Attention e se tornou o padrao da industria para alto throughput.
+O vLLM e o framework de referência para serving de LLMs em produção com GPUs NVIDIA. Introduziu o Paged Attention e se tornou o padrão da industria para alto throughput.
 
 ### Caracteristicas principais
 
-- **Paged Attention:** gerenciamento de memoria do KV cache (Cap. 6)
+- **Paged Attention:** gerenciamento de memória do KV cache (Cap. 6)
 - **Continuous Batching:** slots reutilizados dinamicamente
 - **Prefix Caching:** compartilhamento de KV cache entre requisicoes com mesmo prefixo
 - **Speculative Decoding:** suporte a n-gram, Eagle3, draft models
 - **Tensor Parallelism:** distribui modelo entre multiplas GPUs automaticamente
-- **API OpenAI-compatible:** drop-in replacement para aplicacoes que usam a API da OpenAI
+- **API OpenAI-compatible:** drop-in replacement para aplicações que usam a API da OpenAI
 
 ### Iniciando o servidor
 
@@ -140,7 +140,7 @@ vllm serve Qwen/Qwen2.5-32B-Instruct \
   --disable-log-requests
 ```
 
-### Consumindo a API (compativel com OpenAI)
+### Consumindo a API (compatível com OpenAI)
 
 ```python
 """
@@ -198,17 +198,17 @@ vllm bench serve \
 
 ### Quando usar vLLM
 
-- Producao com GPU NVIDIA (12 GB+ VRAM)
+- Produção com GPU NVIDIA (12 GB+ VRAM)
 - Alto throughput e muitos usuarios simultaneos
-- Quando voce precisa de API compativel com OpenAI
+- Quando você precisa de API compatível com OpenAI
 - Multi-GPU serving (tensor parallelism)
 - Quando prefix caching importa (ex: mesmo system prompt para todos)
 
 ---
 
-## 7.4 SGLang: RadixAttention e programacao estruturada
+## 7.4 SGLang: RadixAttention e programação estruturada
 
-O SGLang (Structured Generation Language) combina um runtime de serving eficiente com uma linguagem de programacao para LLMs. Seu diferencial e o **RadixAttention**, uma evolucao do prefix caching.
+O SGLang (Structured Generation Language) combina um runtime de serving eficiente com uma linguagem de programação para LLMs. Seu diferencial e o **RadixAttention**, uma evolução do prefix caching.
 
 ### RadixAttention
 
@@ -229,7 +229,7 @@ RadixAttention armazena:
 
 Para workflows com muitas requisicoes compartilhando prefixos (ex: RAG, few-shot prompting, agentes), o RadixAttention reduz significativamente o tempo de prefill.
 
-### Uso basico
+### Uso básico
 
 ```python
 """
@@ -275,25 +275,25 @@ print(texto)
 ### Quando usar SGLang
 
 - Workflows com prefix sharing intensivo (RAG, agentes, few-shot)
-- Quando voce precisa de geracao estruturada (JSON, codigo)
-- Alta concorrencia com prefixos repetidos
-- Pesquisa e experimentacao com LLMs
+- Quando você precisa de geração estruturada (JSON, código)
+- Alta concorrência com prefixos repetidos
+- Pesquisa e experimentação com LLMs
 
 ---
 
-## 7.5 TensorRT-LLM: otimizacao NVIDIA, FP8, inflight batching
+## 7.5 TensorRT-LLM: otimização NVIDIA, FP8, inflight batching
 
-O TensorRT-LLM e o framework da NVIDIA para extrair performance maxima de GPUs NVIDIA. Compila o modelo em um grafo otimizado especifico para a sua GPU.
+O TensorRT-LLM e o framework da NVIDIA para extrair performance máxima de GPUs NVIDIA. Compila o modelo em um grafo otimizado específico para a sua GPU.
 
 ### Caracteristicas principais
 
-- **Compilacao de grafo:** converte o modelo em operacoes otimizadas para a GPU especifica
-- **FP8:** quantizacao nativa em 8 bits de ponto flutuante (Hopper/Ada GPUs)
-- **Inflight Batching:** variacao do continuous batching otimizada para a arquitetura NVIDIA
+- **Compilação de grafo:** converte o modelo em operações otimizadas para a GPU específica
+- **FP8:** quantização nativa em 8 bits de ponto flutuante (Hopper/Ada GPUs)
+- **Inflight Batching:** variação do continuous batching otimizada para a arquitetura NVIDIA
 - **Multi-GPU:** suporte a tensor parallelism e pipeline parallelism
-- **KV Cache otimizado:** implementacao nativa com paging e eviction
+- **KV Cache otimizado:** implementação nativa com paging e eviction
 
-### Exemplo basico
+### Exemplo básico
 
 ```python
 """
@@ -330,10 +330,10 @@ for output in outputs:
 ### Quando usar TensorRT-LLM
 
 - GPUs NVIDIA datacenter (A100, H100, H200)
-- Quando throughput maximo e prioridade absoluta
+- Quando throughput máximo e prioridade absoluta
 - GPUs com suporte a FP8 (RTX 4090, Ada, Hopper)
-- Producao enterprise com SLA rigoroso
-- **Nao usar quando:** hardware nao-NVIDIA, prototipacao rapida, GPU de consumo com pouca VRAM
+- Produção enterprise com SLA rigoroso
+- **Não usar quando:** hardware não-NVIDIA, prototipação rapida, GPU de consumo com pouca VRAM
 
 ---
 
@@ -341,7 +341,7 @@ for output in outputs:
 
 A tabela abaixo sintetiza benchmarks tipicos em uma GPU RTX 3090 (24 GB) com o modelo Qwen 2.5 7B:
 
-| Metrica | Ollama (GGUF Q4) | llama.cpp (GGUF Q4) | vLLM (GPTQ Int4) | SGLang (AWQ) | TensorRT-LLM (FP8) |
+| Métrica | Ollama (GGUF Q4) | llama.cpp (GGUF Q4) | vLLM (GPTQ Int4) | SGLang (AWQ) | TensorRT-LLM (FP8) |
 |---------|------------------|---------------------|-------------------|--------------|---------------------|
 | **TTFT** (1 req) | ~120 ms | ~100 ms | ~80 ms | ~75 ms | ~50 ms |
 | **TPS** (1 req) | ~70 tok/s | ~75 tok/s | ~90 tok/s | ~95 tok/s | ~120 tok/s |
@@ -350,10 +350,10 @@ A tabela abaixo sintetiza benchmarks tipicos em uma GPU RTX 3090 (24 GB) com o m
 | **Setup time** | 1 min | 5 min | 3 min | 3 min | 15 min |
 | **Dificuldade** | Trivial | Moderada | Moderada | Moderada | Alta |
 
-**Observacoes importantes:**
+**Observações importantes:**
 
-- Ollama e llama.cpp tem throughput similar em usuario unico, mas nao escalam bem com muitos usuarios
-- vLLM e SGLang dominam em cenarios de alta concorrencia gracas ao continuous batching e Paged Attention
+- Ollama e llama.cpp tem throughput similar em usuario único, mas não escalam bem com muitos usuarios
+- vLLM e SGLang dominam em cenarios de alta concorrência gracas ao continuous batching e Paged Attention
 - TensorRT-LLM lidera em performance bruta mas exige mais esforco de setup
 - Benchmarks reais variam significativamente com hardware, modelo e workload
 
@@ -386,16 +386,16 @@ Voce tem GPU NVIDIA?
 **Regra simplificada:**
 
 1. **Comecando agora?** Ollama
-2. **Indo para producao?** vLLM
+2. **Indo para produção?** vLLM
 3. **Precisa escalar prefix caching?** SGLang
-4. **Hardware NVIDIA enterprise + maximo desempenho?** TensorRT-LLM
-5. **Hardware limitado ou nao-NVIDIA?** llama.cpp
+4. **Hardware NVIDIA enterprise + máximo desempenho?** TensorRT-LLM
+5. **Hardware limitado ou não-NVIDIA?** llama.cpp
 
 ---
 
-## 7.8 Deploy com Docker: exemplo pratico
+## 7.8 Deploy com Docker: exemplo prático
 
-Docker e a forma mais confiavel de deployar LLMs em producao. Aqui esta um exemplo completo com vLLM:
+Docker e a forma mais confiável de deployar LLMs em produção. Aqui está um exemplo completo com vLLM:
 
 ### docker-compose.yml
 
@@ -503,27 +503,27 @@ curl http://localhost:11434/api/chat -d '{
 
 ---
 
-## Resumo do capitulo
+## Resumo do capítulo
 
-1. **Ollama** e a porta de entrada -- simples, funciona em 1 minuto, ideal para uso pessoal e prototipacao
-2. **llama.cpp** e o motor por tras do Ollama -- use diretamente quando precisa de controle fino sobre offloading e hardware nao-NVIDIA
-3. **vLLM** e o padrao de producao -- Paged Attention, continuous batching, API OpenAI-compatible, tensor parallelism
-4. **SGLang** se destaca em workflows com prefix sharing via RadixAttention e geracao estruturada
-5. **TensorRT-LLM** extrai performance maxima de GPUs NVIDIA enterprise com compilacao de grafo e FP8
-6. **Docker** e a forma recomendada de deployar qualquer um desses frameworks em producao
+1. **Ollama** e a porta de entrada -- simples, funciona em 1 minuto, ideal para uso pessoal e prototipação
+2. **llama.cpp** e o motor por tras do Ollama -- use diretamente quando precisa de controle fino sobre offloading e hardware não-NVIDIA
+3. **vLLM** e o padrão de produção -- Paged Attention, continuous batching, API OpenAI-compatible, tensor parallelism
+4. **SGLang** se destaca em workflows com prefix sharing via RadixAttention e geração estruturada
+5. **TensorRT-LLM** extrai performance máxima de GPUs NVIDIA enterprise com compilação de grafo e FP8
+6. **Docker** e a forma recomendada de deployar qualquer um desses frameworks em produção
 
-Nos proximos capitulos, voce vai aprender a configurar um gateway de API para gerenciar multiplos modelos e implementar RAG (Retrieval-Augmented Generation) com seu LLM local.
+Nos proximos capitulos, você vai aprender a configurar um gateway de API para gerenciar multiplos modelos e implementar RAG (Retrieval-Augmented Generation) com seu LLM local.
 
 ---
 
 ## Fontes
 
 1. Wang, C. & Hu, P. (2025). *Hands-On LLM Serving and Optimization*. O'Reilly Media. Cap. 8 (LLM Serving Frameworks Overview).
-2. Wang, C. & Hu, P. (2025). Notebooks: `llamaCpp.ipynb`, `SGLang.ipynb`, `TensorRT_LLM.ipynb`. Repositorio: github.com/orca3/llm-model-serving.
+2. Wang, C. & Hu, P. (2025). Notebooks: `llamaCpp.ipynb`, `SGLang.ipynb`, `TensorRT_LLM.ipynb`. Repositório: github.com/orca3/llm-model-serving.
 3. Troyer, L. (2026). *Benchmarking LLM Serving Systems*. Johannes Kepler University. Secoes 2.9 (LLM Serving Systems), 3.5 (LLM Serving System Selection), Cap. 5 (Results).
 4. Kwon, W. et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. SOSP 2023.
-5. Zheng, L. et al. (2024). *SGLang: Efficient Execution of Structured Language Model Programs*. Disponivel em: https://arxiv.org/abs/2312.07104
-6. NVIDIA (2025). *TensorRT-LLM Documentation*. Disponivel em: https://nvidia.github.io/TensorRT-LLM/
-7. Repositorio llama.cpp. Disponivel em: https://github.com/ggerganov/llama.cpp
-8. Repositorio Ollama. Disponivel em: https://github.com/ollama/ollama
-9. Repositorio vLLM. Disponivel em: https://github.com/vllm-project/vllm
+5. Zheng, L. et al. (2024). *SGLang: Efficient Execution of Structured Language Model Programs*. Disponível em: https://arxiv.org/abs/2312.07104
+6. NVIDIA (2025). *TensorRT-LLM Documentation*. Disponível em: https://nvidia.github.io/TensorRT-LLM/
+7. Repositório llama.cpp. Disponível em: https://github.com/ggerganov/llama.cpp
+8. Repositório Ollama. Disponível em: https://github.com/ollama/ollama
+9. Repositório vLLM. Disponível em: https://github.com/vllm-project/vllm

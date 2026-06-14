@@ -1,14 +1,14 @@
-# Capitulo 4 -- Primeiros Passos com LLMs Locais
+# Capítulo 4 -- Primeiros Passos com LLMs Locais
 
-Ate aqui voce ja entende o que sao LLMs, por que roda-los localmente e qual hardware precisa. Agora e hora de colocar a mao na massa. Neste capitulo, voce vai baixar seu primeiro modelo, conversar com ele pelo terminal, consumir sua API REST e construir um chatbot simples em Python. Tudo rodando na sua maquina, sem depender de nenhum servico na nuvem.
+Até aqui você já entende o que são LLMs, por que roda-los localmente e qual hardware precisa. Agora e hora de colocar a mão na massa. Neste capítulo, você vai baixar seu primeiro modelo, conversar com ele pelo terminal, consumir sua API REST e construir um chatbot simples em Python. Tudo rodando na sua maquina, sem depender de nenhum serviço na nuvem.
 
 ---
 
 ## 4.1 Baixando seu primeiro modelo com Ollama
 
-O Ollama e a forma mais simples de rodar LLMs localmente. Com um unico comando, ele baixa o modelo, configura o runtime e expoe uma API REST. Pense nele como o "Docker dos LLMs".
+O Ollama e a forma mais simples de rodar LLMs localmente. Com um único comando, ele baixa o modelo, configura o runtime e expoe uma API REST. Pense nele como o "Docker dos LLMs".
 
-Depois de instalar o Ollama (veja o Capitulo 3), abra o terminal e execute:
+Depois de instalar o Ollama (veja o Capítulo 3), abra o terminal e execute:
 
 ```bash
 # Baixar e executar o modelo Llama 3.2 de 3 bilhoes de parametros
@@ -24,7 +24,7 @@ O que acontece nos bastidores:
 
 O download do `llama3.2:3b` e de aproximadamente 2 GB. Para modelos maiores como o `llama3.1:70b`, espere algo em torno de 40 GB.
 
-Para listar os modelos ja baixados:
+Para listar os modelos já baixados:
 
 ```bash
 ollama list
@@ -37,7 +37,7 @@ NAME              ID            SIZE    MODIFIED
 llama3.2:3b       a80c4f17acd5  2.0 GB  2 minutes ago
 ```
 
-Para remover um modelo que nao usa mais:
+Para remover um modelo que não usa mais:
 
 ```bash
 ollama rm llama3.2:3b
@@ -49,11 +49,11 @@ ollama rm llama3.2:3b
 
 Nem todo modelo serve para tudo. A tabela abaixo compara as familias mais relevantes para uso local em 2025/2026:
 
-| Familia | Desenvolvedor | Tamanhos disponiveis | Forca principal | Licenca |
+| Familia | Desenvolvedor | Tamanhos disponiveis | Forca principal | Licença |
 |---------|--------------|---------------------|-----------------|---------|
 | **Llama 3.2/3.3** | Meta | 1B, 3B, 8B, 70B, 405B | Equilibrio geral, multilingual | Llama 3.3 Community |
-| **Qwen 2.5/3** | Alibaba | 0.5B, 1.5B, 3B, 7B, 14B, 32B, 72B | Codigo, matematica, multilingual | Apache 2.0 |
-| **Mistral** | Mistral AI | 7B, 8x7B (MoE), 8x22B | Eficiencia por parametro | Apache 2.0 |
+| **Qwen 2.5/3** | Alibaba | 0.5B, 1.5B, 3B, 7B, 14B, 32B, 72B | Código, matemática, multilingual | Apache 2.0 |
+| **Mistral** | Mistral AI | 7B, 8x7B (MoE), 8x22B | Eficiência por parâmetro | Apache 2.0 |
 | **Phi-3/4** | Microsoft | 3.8B, 7B, 14B | Modelos pequenos com alta qualidade | MIT |
 | **Gemma 2/3** | Google | 2B, 9B, 27B | Pesquisa, raciocinio | Gemma License |
 | **DeepSeek-R1** | DeepSeek | 1.5B, 7B, 8B, 14B, 32B, 70B, 671B | Raciocinio profundo (chain-of-thought) | MIT |
@@ -69,13 +69,13 @@ Nem todo modelo serve para tudo. A tabela abaixo compara as familias mais releva
 
 ## 4.3 Tamanhos de modelo: o que cabe na sua GPU
 
-O tamanho de um modelo em memoria depende de dois fatores: o numero de parametros e a precisao numerica (quantizacao). A regra pratica e:
+O tamanho de um modelo em memória depende de dois fatores: o número de parâmetros e a precisão numerica (quantização). A regra prática e:
 
 ```
 Memoria (GB) ≈ Parametros (bilhoes) x Bytes por parametro
 ```
 
-| Parametros | FP16 (2 bytes) | Q8 (1 byte) | Q4 (0.5 byte) |
+| Parâmetros | FP16 (2 bytes) | Q8 (1 byte) | Q4 (0.5 byte) |
 |-----------|---------------|-------------|---------------|
 | 1B | 2 GB | 1 GB | 0.5 GB |
 | 3B | 6 GB | 3 GB | 1.5 GB |
@@ -84,9 +84,9 @@ Memoria (GB) ≈ Parametros (bilhoes) x Bytes por parametro
 | 30B | 60 GB | 30 GB | 15 GB |
 | 70B | 140 GB | 70 GB | 35 GB |
 
-**Atencao:** esses valores sao apenas para os pesos do modelo. Na pratica, voce precisa de memoria adicional para o KV cache (cache de atencao), que cresce com o tamanho do contexto. Uma margem segura e reservar 20-30% alem do tamanho do modelo.
+**Atenção:** esses valores são apenas para os pesos do modelo. Na prática, você precisa de memória adicional para o KV cache (cache de atenção), que cresce com o tamanho do contexto. Uma margem segura e reservar 20-30% além do tamanho do modelo.
 
-**Exemplo pratico:** um modelo de 7B quantizado em Q4_K_M ocupa cerca de 4.4 GB. Numa GPU com 8 GB de VRAM, isso deixa ~3.6 GB para o KV cache, o que permite contextos de ate ~8.000 tokens confortavelmente.
+**Exemplo prático:** um modelo de 7B quantizado em Q4_K_M ocupa cerca de 4.4 GB. Numa GPU com 8 GB de VRAM, isso deixa ~3.6 GB para o KV cache, o que permite contextos de até ~8.000 tokens confortavelmente.
 
 Para verificar quanto de VRAM sua GPU tem:
 
@@ -136,11 +136,11 @@ ollama run llama3.2:3b "O que e uma GPU?"
 
 ## 4.5 API REST do Ollama
 
-O Ollama expoe uma API REST na porta 11434. Isso e o que torna possivel integrar LLMs locais com qualquer linguagem de programacao.
+O Ollama expoe uma API REST na porta 11434. Isso é o que torna possível integrar LLMs locais com qualquer linguagem de programação.
 
-### 4.5.1 /api/generate -- Geracao de texto
+### 4.5.1 /api/generate -- Geração de texto
 
-A rota mais basica. Envia um prompt, recebe a resposta:
+A rota mais básica. Envia um prompt, recebe a resposta:
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
@@ -164,13 +164,13 @@ Resposta (simplificada):
 ```
 
 Campos importantes da resposta:
-- `eval_count`: numero de tokens gerados
-- `eval_duration`: tempo de geracao em nanosegundos
+- `eval_count`: número de tokens gerados
+- `eval_duration`: tempo de geração em nanosegundos
 - **Tokens por segundo** = `eval_count / (eval_duration / 1e9)` = 156 / 2.3 ≈ 67.8 tok/s
 
-### 4.5.2 /api/chat -- Conversa com historico
+### 4.5.2 /api/chat -- Conversa com histórico
 
-Para aplicacoes de chat, use a rota que aceita mensagens com roles:
+Para aplicações de chat, use a rota que aceita mensagens com roles:
 
 ```bash
 curl http://localhost:11434/api/chat -d '{
@@ -187,7 +187,7 @@ curl http://localhost:11434/api/chat -d '{
 
 ### 4.5.3 /api/embed -- Gerar embeddings
 
-Para aplicacoes de busca semantica e RAG (Retrieval-Augmented Generation):
+Para aplicações de busca semântica e RAG (Retrieval-Augmented Generation):
 
 ```bash
 curl http://localhost:11434/api/embed -d '{
@@ -196,19 +196,19 @@ curl http://localhost:11434/api/embed -d '{
 }'
 ```
 
-A resposta contem um vetor numerico (embedding) que representa o significado semantico do texto. Esses vetores podem ser armazenados em bancos vetoriais como Qdrant, ChromaDB ou Milvus.
+A resposta contém um vetor numerico (embedding) que representa o significado semântico do texto. Esses vetores podem ser armazenados em bancos vetoriais como Qdrant, ChromaDB ou Milvus.
 
 ---
 
 ## 4.6 Batching: processando multiplas requisicoes
 
-Quando voce envia uma unica pergunta por vez, a GPU fica subutilizada. **Batching** e a tecnica de agrupar multiplas requisicoes para processamento simultaneo, maximizando o uso do hardware.
+Quando você envia uma única pergunta por vez, a GPU fica subutilizada. **Batching** e a técnica de agrupar multiplas requisicoes para processamento simultaneo, maximizando o uso do hardware.
 
 Existem dois tipos fundamentais:
 
-### Static Batching (lote estatico)
+### Static Batching (lote estático)
 
-Todas as requisicoes do lote sao processadas juntas. O lote so e liberado quando **todas** as respostas terminam. Se uma resposta tem 10 tokens e outra tem 500, a GPU fica ociosa esperando a mais longa.
+Todas as requisicoes do lote são processadas juntas. O lote só e liberado quando **todas** as respostas terminam. Se uma resposta tem 10 tokens e outra tem 500, a GPU fica ociosa esperando a mais longa.
 
 ### Continuous Batching (lote continuo)
 
@@ -225,17 +225,17 @@ Continuous Batching:
 [Req B ██████████████████████████████████ ]
 ```
 
-Na pratica com Ollama, voce pode enviar multiplas requisicoes simultaneas e o servidor gerencia a fila internamente. Para maior controle de batching, frameworks como vLLM sao mais adequados (veja Capitulo 7).
+Na prática com Ollama, você pode enviar multiplas requisicoes simultaneas e o servidor gerência a fila internamente. Para maior controle de batching, frameworks como vLLM são mais adequados (veja Capítulo 7).
 
 ---
 
 ## 4.7 Streaming: respostas em tempo real
 
-Por padrao, a API do Ollama retorna a resposta completa de uma vez. Com **streaming**, os tokens sao enviados conforme sao gerados, permitindo que o usuario veja a resposta sendo construida em tempo real -- exatamente como acontece no ChatGPT.
+Por padrão, a API do Ollama retorna a resposta completa de uma vez. Com **streaming**, os tokens são enviados conforme são gerados, permitindo que o usuario veja a resposta sendo construida em tempo real -- exatamente como acontece no ChatGPT.
 
 ### Como funciona
 
-O streaming usa o padrao **Server-Sent Events (SSE)**: o servidor mantem a conexao HTTP aberta e envia fragmentos de dados conforme ficam prontos.
+O streaming usa o padrão **Server-Sent Events (SSE)**: o servidor mantém a conexao HTTP aberta e envia fragmentos de dados conforme ficam prontos.
 
 ```bash
 # Com stream habilitado (padrao no curl)
@@ -246,7 +246,7 @@ curl http://localhost:11434/api/generate -d '{
 }'
 ```
 
-Cada linha da resposta e um JSON independente:
+Cada linha da resposta é um JSON independente:
 
 ```json
 {"model":"llama3.2:3b","response":"Era","done":false}
@@ -258,15 +258,15 @@ Cada linha da resposta e um JSON independente:
 
 ### Por que streaming importa
 
-- **Experiencia do usuario:** a percepcao de velocidade melhora dramaticamente. O usuario comeca a ler enquanto o modelo ainda gera
-- **Time to First Token (TTFT):** com streaming, o TTFT e o tempo ate o primeiro token aparecer, geralmente menos de 200 ms em modelos pequenos
-- **Aplicacoes interativas:** chatbots, assistentes de codigo e interfaces conversacionais dependem de streaming para parecerem naturais
+- **Experiência do usuario:** a percepcao de velocidade melhora dramaticamente. O usuario comeca a ler enquanto o modelo ainda gera
+- **Time to First Token (TTFT):** com streaming, o TTFT e o tempo até o primeiro token aparecer, geralmente menos de 200 ms em modelos pequenos
+- **Aplicações interativas:** chatbots, assistentes de código e interfaces conversacionais dependem de streaming para parecerem naturais
 
 ---
 
-## 4.8 Exemplo pratico: chatbot simples com Python + Ollama
+## 4.8 Exemplo prático: chatbot simples com Python + Ollama
 
-Vamos construir um chatbot funcional que mantem historico de conversa e usa streaming. Este codigo roda com Python 3.10+ e a biblioteca `requests` (ja inclusa na maioria das instalacoes):
+Vamos construir um chatbot funcional que mantém histórico de conversa e usa streaming. Este código roda com Python 3.10+ e a biblioteca `requests` (já inclusa na maioria das instalações):
 
 ```python
 """
@@ -411,19 +411,19 @@ contexto e com o numero de camadas do modelo...
 
 ---
 
-## Resumo do capitulo
+## Resumo do capítulo
 
-Neste capitulo voce:
+Neste capítulo você:
 
 1. **Baixou e gerenciou modelos** com `ollama pull` e `ollama list`
 2. **Comparou familias de modelos** (Llama, Qwen, Mistral, Phi) e seus casos de uso
-3. **Entendeu a relacao entre tamanho do modelo, quantizacao e VRAM**
+3. **Entendeu a relação entre tamanho do modelo, quantização e VRAM**
 4. **Conversou com um LLM** diretamente pelo terminal
-5. **Explorou a API REST** do Ollama: geracao, chat e embeddings
-6. **Aprendeu sobre batching e streaming** -- os dois pilares de performance em inferencia
-7. **Construiu um chatbot funcional** em Python com streaming e historico de contexto
+5. **Explorou a API REST** do Ollama: geração, chat e embeddings
+6. **Aprendeu sobre batching e streaming** -- os dois pilares de performance em inferência
+7. **Construiu um chatbot funcional** em Python com streaming e histórico de contexto
 
-No proximo capitulo, vamos mergulhar na **quantizacao** -- a tecnica que torna possivel rodar modelos de 70 bilhoes de parametros em uma unica GPU de consumo.
+No próximo capítulo, vamos mergulhar na **quantização** -- a técnica que torna possível rodar modelos de 70 bilhoes de parâmetros em uma única GPU de consumo.
 
 ---
 
@@ -431,7 +431,7 @@ No proximo capitulo, vamos mergulhar na **quantizacao** -- a tecnica que torna p
 
 1. Wang, C. & Hu, P. (2025). *Hands-On LLM Serving and Optimization: Hosting LLMs at Scale*. O'Reilly Media. Cap. 1-2.
 2. Troyer, L. (2026). *Benchmarking LLM Serving Systems*. Master Thesis, Johannes Kepler University Linz. Cap. 2 (LLM Serving System, Performance Metrics).
-3. Ollama Documentation. Disponivel em: https://github.com/ollama/ollama/blob/main/docs/api.md
-4. Wang, C. & Hu, P. (2025). Notebooks de referencia: `ch2_Streaming.ipynb`, `ch2_Batching.ipynb`. Repositorio: github.com/orca3/llm-model-serving.
-5. Meta AI (2024). *Llama 3.2 Model Card*. Disponivel em: https://github.com/meta-llama/llama-models
+3. Ollama Documentation. Disponível em: https://github.com/ollama/ollama/blob/main/docs/api.md
+4. Wang, C. & Hu, P. (2025). Notebooks de referência: `ch2_Streaming.ipynb`, `ch2_Batching.ipynb`. Repositório: github.com/orca3/llm-model-serving.
+5. Meta AI (2024). *Llama 3.2 Model Card*. Disponível em: https://github.com/meta-llama/llama-models
 6. Qwen Team (2025). *Qwen2.5 Technical Report*. Alibaba Group.

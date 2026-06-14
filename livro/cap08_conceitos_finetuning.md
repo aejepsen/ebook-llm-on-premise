@@ -1,6 +1,6 @@
 # Capítulo 8 — Conceitos de Fine-Tuning
 
-## O que é fine-tuning e quando usar
+## O que é fine-tuning é quando usar
 
 Fine-tuning é o processo de continuar o treinamento de um modelo de linguagem pré-treinado usando dados específicos da sua tarefa. Enquanto o pré-treinamento ensina o modelo a "entender" linguagem a partir de trilhões de tokens da internet, o fine-tuning o especializa em um domínio, formato de saída ou comportamento particular.
 

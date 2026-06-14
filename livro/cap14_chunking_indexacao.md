@@ -239,7 +239,7 @@ A regra empírica:
 | 1000 caracteres | 100–200 | 10–20% |
 | 2000 caracteres | 200–300 | 10–15% |
 
-**10–20%** do tamanho do chunk é o intervalo que funciona na maioria dos cenários. Menos que isso e você perde contexto de fronteira. Mais que isso e você infla o índice com conteúdo duplicado, desperdiçando espaço e poluindo os resultados.
+**10–20%** do tamanho do chunk é o intervalo que funciona na maioria dos cenários. Menos que isso é você perde contexto de fronteira. Mais que isso é você infla o índice com conteúdo duplicado, desperdiçando espaço e poluindo os resultados.
 
 ### Quando NÃO usar overlap
 
