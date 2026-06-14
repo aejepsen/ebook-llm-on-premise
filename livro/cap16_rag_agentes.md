@@ -1,4 +1,4 @@
-# Capítulo 15 — RAG com Agentes
+# Capítulo 16 — RAG com Agentes
 
 ## O que são agentes LLM
 

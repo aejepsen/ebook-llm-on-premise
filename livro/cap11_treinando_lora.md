@@ -1,4 +1,4 @@
-# Capítulo 10 — Treinando LoRA na Prática
+# Capítulo 11 — Treinando LoRA na Prática
 
 ## Unsloth: por que é a melhor opção para GPU consumer
 

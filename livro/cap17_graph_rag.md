@@ -1,4 +1,4 @@
-# Capítulo 16 — Graph RAG com Neo4j
+# Capítulo 17 — Graph RAG com Neo4j
 
 ## Limitações do RAG vetorial puro
 

@@ -1,4 +1,4 @@
-# Capítulo 11 — Avaliação e Métricas de Modelos Fine-Tuned
+# Capítulo 12 — Avaliação e Métricas de Modelos Fine-Tuned
 
 ## Métricas de avaliação: perplexidade, acurácia, F1
 

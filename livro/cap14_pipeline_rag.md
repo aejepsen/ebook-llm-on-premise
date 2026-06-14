@@ -1,4 +1,4 @@
-# Capítulo 13 — Pipeline RAG Completo
+# Capítulo 14 — Pipeline RAG Completo
 
 ## O que é RAG e por que usar com LLM local
 

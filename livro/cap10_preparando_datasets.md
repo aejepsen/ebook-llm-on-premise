@@ -1,4 +1,4 @@
-# Capítulo 9 — Preparando Datasets para Fine-Tuning
+# Capítulo 10 — Preparando Datasets para Fine-Tuning
 
 ## Formatos de dataset: instruction, chat, completion
 

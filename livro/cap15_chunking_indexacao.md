@@ -1,4 +1,4 @@
-# Capítulo 14 — Chunking e Estratégias de Indexação
+# Capítulo 15 — Chunking e Estratégias de Indexação
 
 ## Por que chunking importa
 

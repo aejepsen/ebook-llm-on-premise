@@ -1,4 +1,4 @@
-# Capítulo 19 — Segurança e Governança
+# Capítulo 20 — Segurança e Governança
 
 ## Prompt Injection: ataques e defesas
 

@@ -1,4 +1,4 @@
-# Capítulo 12 — Exportando e Colocando em Produção
+# Capítulo 13 — Exportando e Colocando em Produção
 
 ## Merge: LoRA adapter + modelo base
 

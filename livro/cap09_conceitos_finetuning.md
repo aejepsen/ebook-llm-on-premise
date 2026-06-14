@@ -1,4 +1,4 @@
-# Capítulo 8 — Conceitos de Fine-Tuning
+# Capítulo 9 — Conceitos de Fine-Tuning
 
 ## O que é fine-tuning é quando usar
 

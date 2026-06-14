@@ -15,23 +15,26 @@ Livro prático de AI Engineering para iniciantes — do zero ao deploy de modelo
 6. [Otimização de inferência (KV cache, speculative decoding)](livro/cap06_otimizacao_inferencia.md)
 7. [Frameworks de serving (llama.cpp, SGLang, TensorRT-LLM)](livro/cap07_frameworks_serving.md)
 
-### Parte III — Fine-Tuning
-8. [Conceitos de fine-tuning (full, LoRA, QLoRA)](livro/cap08_conceitos_finetuning.md)
-9. [Preparando datasets de treino](livro/cap09_preparando_datasets.md)
-10. [Treinando com Unsloth + LoRA na prática](livro/cap10_treinando_lora.md)
-11. [Avaliação e métricas do modelo treinado](livro/cap11_avaliacao_metricas.md)
-12. [Exportando para produção (GGUF, merge, deploy)](livro/cap12_exportando_producao.md)
+### Parte III — Modelos Encoder
+8. [BERT e modelos encoder: classificação, embeddings e detecção](livro/cap08_bert_encoders.md)
 
-### Parte IV — RAG (Retrieval-Augmented Generation)
-13. [Pipeline RAG completo (embeddings, vector DB, retrieval)](livro/cap13_pipeline_rag.md)
-14. [Chunking e estratégias de indexação](livro/cap14_chunking_indexacao.md)
-15. [RAG com agentes (function calling, LangGraph)](livro/cap15_rag_agentes.md)
-16. [Graph RAG com Neo4j](livro/cap16_graph_rag.md)
+### Parte IV — Fine-Tuning
+9. [Conceitos de fine-tuning (full, LoRA, QLoRA)](livro/cap09_conceitos_finetuning.md)
+10. [Preparando datasets de treino](livro/cap10_preparando_datasets.md)
+11. [Treinando com Unsloth + LoRA na prática](livro/cap11_treinando_lora.md)
+12. [Avaliação e métricas do modelo treinado](livro/cap12_avaliacao_metricas.md)
+13. [Exportando para produção (GGUF, merge, deploy)](livro/cap13_exportando_producao.md)
 
-### Parte V — Produção
-17. [Benchmarking e monitoramento](livro/cap17_benchmarking.md)
-18. [Arquitetura multi-agente on-premise](livro/cap18_multi_agente.md)
-19. [Segurança e governança de LLMs locais](livro/cap19_seguranca_governanca.md)
+### Parte V — RAG (Retrieval-Augmented Generation)
+14. [Pipeline RAG completo (embeddings, vector DB, retrieval)](livro/cap14_pipeline_rag.md)
+15. [Chunking e estratégias de indexação](livro/cap15_chunking_indexacao.md)
+16. [RAG com agentes (function calling, LangGraph)](livro/cap16_rag_agentes.md)
+17. [Graph RAG com Neo4j](livro/cap17_graph_rag.md)
+
+### Parte VI — Produção
+18. [Benchmarking e monitoramento](livro/cap18_benchmarking.md)
+19. [Arquitetura multi-agente on-premise](livro/cap19_multi_agente.md)
+20. [Segurança e governança de LLMs locais](livro/cap20_seguranca_governanca.md)
 
 ### Referências
 - [Bibliografia e fontes](referencias/bibliografia.md)
@@ -48,17 +51,17 @@ Cada capítulo possui um notebook correspondente na pasta `notebooks/`, com expl
 | `cap05_quantizacao.ipynb` | 5 | Quantização de modelos (GPTQ, AWQ, GGUF) |
 | `cap06_otimizacao.ipynb` | 6 | KV cache e speculative decoding |
 | `cap07_serving.ipynb` | 7 | Frameworks de serving na prática |
-| `cap08_finetuning_intro.ipynb` | 8 | LoRA e QLoRA — conceitos aplicados |
-| `cap09_datasets.ipynb` | 9 | Construção e curadoria de datasets |
-| `cap10_lora_unsloth.ipynb` | 10 | Treino LoRA com Unsloth (RTX 3060) |
-| `cap11_avaliacao.ipynb` | 11 | Avaliação e benchmarks |
-| `cap12_export_gguf.ipynb` | 12 | Export GGUF e deploy no Ollama |
-| `cap13_rag_pipeline.ipynb` | 13 | Pipeline RAG completo |
-| `cap14_chunking.ipynb` | 14 | Estratégias de chunking |
-| `cap15_rag_agentes.ipynb` | 15 | RAG agentic com LangGraph |
-| `cap16_graph_rag.ipynb` | 16 | Graph RAG com Neo4j |
-| `cap17_benchmarking.ipynb` | 17 | Benchmarking de serving |
-| `cap18_multi_agente.ipynb` | 18 | Orquestrador multi-agente |
+| `cap08_bert_encoders.ipynb` | 8 | BERTimbau, SBERT e detecção de injection |
+| `cap09_finetuning_intro.ipynb` | 9 | LoRA e QLoRA — conceitos aplicados |
+| `cap10_datasets.ipynb` | 10 | Construção e curadoria de datasets |
+| `cap11_lora_unsloth.ipynb` | 11 | Treino LoRA com Unsloth (RTX 3060) |
+| `cap12_avaliacao.ipynb` | 12 | Avaliação e benchmarks |
+| `cap13_export_gguf.ipynb` | 13 | Export GGUF e deploy no Ollama |
+| `cap14_rag_pipeline.ipynb` | 14 | Pipeline RAG completo |
+| `cap15_chunking.ipynb` | 15 | Estratégias de chunking |
+| `cap16_rag_agentes.ipynb` | 16 | RAG agentic com LangGraph |
+| `cap17_graph_rag.ipynb` | 17 | Graph RAG com Neo4j |
+| `cap18_benchmarking.ipynb` | 18 | Benchmarking de serving |
 
 ## Como usar
 
