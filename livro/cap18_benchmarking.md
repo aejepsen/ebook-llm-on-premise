@@ -517,6 +517,311 @@ Isso permite: "por que a requisição X demorou 15 segundos?" → abrir o trace 
 
 Sem observabilidade, a resposta seria "está lento" e ninguém saberia por quê.
 
+## Langfuse em profundidade: observabilidade LLM on-premise
+
+### O que e Langfuse
+
+Langfuse e uma plataforma open-source de observabilidade para LLMs. Diferente de solucoes SaaS como LangSmith ou Helicone, o Langfuse pode ser deployado inteiramente on-premise — requisito para cenarios com dados sensiveis, compliance regulatorio ou air-gapped environments.
+
+Os conceitos centrais:
+
+- **Trace:** representa uma requisicao completa do usuario. Contem metadados (user_id, session_id, tags) e agrega todos os spans e generations.
+- **Span:** uma etapa logica dentro do trace. No AI-Orchestrator, cada no do LangGraph (sanitize, classify, dispatch, synthesize) e um span.
+- **Generation:** uma chamada especifica ao LLM. Registra modelo, prompt, resposta, tokens de entrada/saida e latencia.
+
+### Arquitetura no AI-Orchestrator
+
+```
+Usuario → Gateway /chat → LangGraph Pipeline → Ollama
+                |                  |                |
+                |    [Langfuse SDK Python]          |
+                |         |                        |
+                v         v                        v
+           1 trace    1 span/no              1 generation/call
+                \         |                  /
+                 \        |                 /
+                  v       v                v
+              Langfuse Server (Docker)
+                      |
+                  PostgreSQL
+```
+
+Cada request `POST /chat` cria exatamente 1 trace. Cada no do grafo (sanitize, classify, dispatch, synthesize) abre 1 span dentro desse trace. Cada chamada ao Ollama — seja para classificacao semantica, execucao de agente ou sintese — registra 1 generation com input/output/tokens.
+
+### Implementacao real: Tracer com degradacao graceful
+
+O ponto critico: Langfuse e observabilidade, nao e parte do caminho critico. Se o Langfuse cair, o gateway **deve continuar funcionando**. A implementacao usa o padrao noop handle:
+
+```python
+# gateway/tracing.py
+# Tracer com degradacao graceful — Langfuse offline nao afeta requests
+
+from langfuse import Langfuse
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class TraceHandle:
+    """Wrapper seguro sobre trace do Langfuse.
+
+    Nunca lanca excecao. Se Langfuse estiver offline,
+    todos os metodos sao noop — o request continua normalmente.
+    """
+
+    def __init__(self, trace):
+        self._trace = trace
+
+    def span(self, *, name: str, input: dict | None = None):
+        try:
+            return SpanHandle(self._trace.span(name=name, input=input))
+        except Exception:
+            logger.debug("langfuse span noop: %s", name)
+            return SpanHandle(None)
+
+    def generation(self, *, name: str, model: str, input: list):
+        try:
+            return GenerationHandle(
+                self._trace.generation(name=name, model=model, input=input)
+            )
+        except Exception:
+            return GenerationHandle(None)
+
+    def update(self, **kwargs):
+        try:
+            self._trace.update(**kwargs)
+        except Exception:
+            pass
+
+    def end(self):
+        try:
+            self._trace.update(status="completed")
+        except Exception:
+            pass
+
+
+class SpanHandle:
+    """Wrapper seguro sobre span."""
+
+    def __init__(self, span):
+        self._span = span
+
+    def end(self, *, output: dict | None = None):
+        if self._span:
+            try:
+                self._span.end(output=output)
+            except Exception:
+                pass
+
+
+class GenerationHandle:
+    """Wrapper seguro sobre generation."""
+
+    def __init__(self, generation):
+        self._gen = generation
+
+    def end(self, *, output: str = "", usage: dict | None = None):
+        if self._gen:
+            try:
+                self._gen.end(output=output, usage=usage)
+            except Exception:
+                pass
+
+
+class Tracer:
+    """Ponto de entrada para tracing.
+
+    Inicializa conexao com Langfuse. Se falhar,
+    opera em modo noop sem impactar o pipeline.
+    """
+
+    def __init__(self, settings):
+        try:
+            self._langfuse = Langfuse(
+                host=settings.langfuse_host,
+                public_key=settings.langfuse_public_key,
+                secret_key=settings.langfuse_secret_key,
+            )
+            logger.info("Langfuse conectado: %s", settings.langfuse_host)
+        except Exception as exc:
+            logger.warning("Langfuse indisponivel: %s", exc)
+            self._langfuse = None
+
+    def trace(self, *, trace_id: str, name: str = "chat") -> TraceHandle:
+        if not self._langfuse:
+            return TraceHandle(None)
+        try:
+            t = self._langfuse.trace(id=trace_id, name=name)
+            return TraceHandle(t)
+        except Exception:
+            return TraceHandle(None)
+```
+
+O padrao e simples: cada classe wrappa o objeto real do SDK e captura qualquer excecao. O chamador nunca precisa saber se o Langfuse esta online ou offline. Isso e essencial para producao — observabilidade nao pode ser ponto unico de falha.
+
+### Metricas coletadas via Langfuse
+
+Com traces estruturados, o Langfuse coleta automaticamente:
+
+| Metrica | Onde | Exemplo |
+|---------|------|---------|
+| Latencia por camada | Span duration | sanitize: 12ms, classify: 340ms, dispatch: 8200ms |
+| Tokens in/out | Generation usage | input: 1200, output: 380 |
+| Modelo utilizado | Generation model | qwen2.5:7b-instruct-q4_K_M |
+| Routing layer | Span metadata | semantic (rapido) vs LLM (lento) |
+| Injection blocks | Span output | 3 tentativas bloqueadas em sanitize |
+| Erros por camada | Span status | timeout no agente de RH |
+| Dominios acionados | Trace metadata | ["estoque", "financas"] |
+
+### Dashboard de metricas: endpoint /metrics
+
+O gateway expoe um endpoint `GET /metrics` que agrega dados do Langfuse com cache de 30 segundos. O frontend React consome e exibe cards em tempo real:
+
+```python
+# gateway/metrics.py
+# Endpoint de metricas agregadas com cache
+
+import time
+from functools import lru_cache
+from dataclasses import dataclass
+
+
+@dataclass
+class MetricasAgregadas:
+    total_requests: int
+    latencia_p50_ms: float
+    latencia_p95_ms: float
+    tokens_total: int
+    routing_semantic_pct: float
+    routing_llm_pct: float
+    injection_blocks: int
+    erro_pct: float
+    timestamp: float
+
+
+class MetricsCollector:
+    """Coleta e agrega metricas do Langfuse."""
+
+    CACHE_TTL = 30  # segundos
+
+    def __init__(self, langfuse_client):
+        self._langfuse = langfuse_client
+        self._cache: MetricasAgregadas | None = None
+        self._cache_ts: float = 0
+
+    def get_metrics(self) -> MetricasAgregadas:
+        """Retorna metricas agregadas com cache de 30s."""
+        agora = time.monotonic()
+        if self._cache and (agora - self._cache_ts) < self.CACHE_TTL:
+            return self._cache
+
+        # Busca traces das ultimas 24h via API do Langfuse
+        traces = self._fetch_recent_traces(hours=24)
+        latencias = [t.latency_ms for t in traces if t.latency_ms]
+
+        self._cache = MetricasAgregadas(
+            total_requests=len(traces),
+            latencia_p50_ms=self._percentil(latencias, 50),
+            latencia_p95_ms=self._percentil(latencias, 95),
+            tokens_total=sum(t.tokens for t in traces),
+            routing_semantic_pct=self._routing_pct(traces, "semantic"),
+            routing_llm_pct=self._routing_pct(traces, "llm"),
+            injection_blocks=sum(t.blocks for t in traces),
+            erro_pct=self._erro_pct(traces),
+            timestamp=time.time(),
+        )
+        self._cache_ts = agora
+        return self._cache
+
+    @staticmethod
+    def _percentil(valores: list[float], p: int) -> float:
+        if not valores:
+            return 0.0
+        valores_sorted = sorted(valores)
+        idx = int(len(valores_sorted) * p / 100)
+        return valores_sorted[min(idx, len(valores_sorted) - 1)]
+
+    # _fetch_recent_traces, _routing_pct, _erro_pct omitidos por brevidade
+```
+
+### Deploy on-premise com Docker Compose
+
+O stack minimo para Langfuse on-premise requer dois containers: o servidor Langfuse e um PostgreSQL para persistencia.
+
+```yaml
+# docker-compose.langfuse.yml
+# Langfuse on-premise com persistencia
+
+services:
+  langfuse:
+    image: langfuse/langfuse:2
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
+      SALT: ${LANGFUSE_SALT}
+      NEXTAUTH_URL: http://localhost:3000
+      TELEMETRY_ENABLED: "false"    # desabilita telemetria para ambiente air-gapped
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  langfuse-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  langfuse_pgdata:
+```
+
+Variaveis de ambiente no `.env`:
+
+```bash
+LANGFUSE_DB_PASSWORD=uma_senha_forte_aqui
+LANGFUSE_NEXTAUTH_SECRET=$(openssl rand -base64 32)
+LANGFUSE_SALT=$(openssl rand -base64 32)
+```
+
+No gateway, as variaveis de conexao:
+
+```bash
+LANGFUSE_HOST=http://langfuse:3000
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+```
+
+### Por que observabilidade importa em LLM
+
+LLMs sao fundamentalmente diferentes de software deterministico. A mesma entrada pode produzir saidas diferentes. Sem observabilidade estruturada, voce enfrenta problemas que simplesmente nao existem em software tradicional:
+
+1. **Debugging e impossivel sem traces.** Quando um usuario reporta "resposta errada", voce precisa ver: qual foi o prompt exato? Quais agentes foram acionados? Qual tool call falhou? Sem traces, a resposta e "nao sei".
+
+2. **Drift de qualidade e silencioso.** Trocar de Q4 para Q8, atualizar o modelo, mudar o system prompt — qualquer alteracao pode degradar qualidade em cenarios especificos. Langfuse permite comparar scores de relevancia antes e depois.
+
+3. **Otimizacao de prompts requer dados reais.** Prompts escritos no laboratorio funcionam diferente em producao. Com generations registradas, voce pode identificar padroes de falha e iterar com dados reais.
+
+4. **Custo por request precisa ser medido.** Em infraestrutura on-premise, custo nao e por token como na OpenAI — mas tokens impactam latencia e throughput. Saber que a media e 1.200 tokens de entrada e 380 de saida permite dimensionar hardware.
+
+5. **Reproducao de falhas.** Com o trace completo (prompt, contexto, model config), voce pode reproduzir qualquer falha em ambiente de desenvolvimento. Sem isso, bugs de LLM sao historias que ninguem consegue verificar.
+
 ---
 
 ## Resumo
