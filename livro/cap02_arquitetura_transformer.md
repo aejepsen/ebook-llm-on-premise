@@ -448,10 +448,10 @@ Sem KV Cache (ingênuo):
   Total: O(N²) — cresce quadraticamente
 
 Com KV Cache:
-  Token 1: processa [1], salva K₁,V₁ no cache   → 1 cálculo
-  Token 2: processa [2], consulta cache [K₁,V₁]  → 1 cálculo
-  Token 3: processa [3], consulta cache [K₁₋₂,V₁₋₂] → 1 cálculo
-  Token N: processa [N], consulta cache           → 1 cálculo
+  Token 1: calcula Q₁,K₁,V₁ → atenção → salva K₁,V₁ no cache    → 1 cálculo
+  Token 2: calcula Q₂,K₂,V₂ → atenção Q₂ vs [K₁,K₂] → salva K₂,V₂  → 1 cálculo
+  Token 3: calcula Q₃,K₃,V₃ → atenção Q₃ vs [K₁₋₂,K₃] → salva K₃,V₃ → 1 cálculo
+  Token N: calcula Qₙ,Kₙ,Vₙ → atenção Qₙ vs cache completo      → 1 cálculo
   Total: O(N) — cresce linearmente
 ```
 
@@ -564,7 +564,7 @@ BERT e T5 permanecem relevantes em nichos específicos: BERT para embeddings de 
 - Vaswani, A. et al. (2017). "Attention is All You Need". *NeurIPS 2017*.
 - Alammar, J. & Grootendorst, M. (2024). *Hands-On Large Language Models*, O'Reilly. Cap. 3: Looking Inside Large Language Models.
 - Iusztin, P. & Labonne, M. (2024). *LLM Engineer's Handbook*, Packt. Cap. 1 e 2.
-- Devlin, J. et al. (2019). "BERT: Pré-training of Deep Bidirectional Transformers for Language Understanding". *NAACL 2019*.
-- Radford, A. et al. (2018). "Improving Language Understanding by Generative Pré-Training". *OpenAI*.
+- Devlin, J. et al. (2019). "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding". *NAACL 2019*.
+- Radford, A. et al. (2018). "Improving Language Understanding by Generative Pre-Training". *OpenAI*.
 - Raffel, C. et al. (2020). "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer". *JMLR*.
 - Notebooks de referência: `ch02/ch2_Inside_the_Mind_of_a_Transformer.ipynb`, `ch02/ch2_Workthrough_LLM_execution.ipynb`.
