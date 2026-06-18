@@ -71,9 +71,7 @@ No exemplo: quando o modelo processa a palavra "ele", a Query de "ele" vai ter a
 
 ### A matemática (simplificada)
 
-```
-Attention(Q, K, V) = softmax(Q * K^T / sqrt(d_k)) * V
-```
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
 
 Passo a passo:
 
@@ -196,10 +194,9 @@ Durante o treinamento e a fase de prefill, o Transformer processa todas as palav
 
 O paper original usou funções senoidais:
 
-```
-PE(pos, 2i)     = sin(pos / 10000^(2i/d_model))
-PE(pos, 2i+1)   = cos(pos / 10000^(2i/d_model))
-```
+$$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
+
+$$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
 
 Onde `pos` é a posição da palavra e `i` é a dimensão. Essas funções geram um padrão único para cada posição, e o modelo aprende a interpretar esses padrões como informação de ordem.
 
@@ -235,9 +232,7 @@ Após a atenção determinar **quais** palavras são relevantes, a **Feed-Forwar
 
 ### FFN clássica (Transformer original, 2017)
 
-```
-FFN(x) = ReLU(xW₁ + b₁)W₂ + b₂
-```
+$$\text{FFN}(x) = \text{ReLU}(xW_1 + b_1)W_2 + b_2$$
 
 A FFN tipicamente expande a dimensão (ex: de 4096 para 16384), aplica uma não-linearidade, e projeta de volta para a dimensão original. Essa expansão temporária permite ao modelo computar transformações mais ricas.
 
@@ -296,18 +291,15 @@ Redes neurais profundas sofrem de um problema: a escala dos valores muda conform
 
 **Layer Normalization** resolve isso normalizando os valores em cada camada para ter média 0 e variância 1:
 
-```
-LayerNorm(x) = gamma * (x - media) / sqrt(variancia + epsilon) + beta
-```
+$$\text{LayerNorm}(x) = \gamma \cdot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta$$
 
 Onde `gamma` e `beta` são parâmetros aprendíveis. O modelo pode aprender a escala e o deslocamento ideais, mas parte de uma base normalizada.
 
 O Transformer original aplica LayerNorm **depois** de cada sub-camada (Post-LN). Modelos modernos usam **Pré-LN** — normalizam **antes** de cada sub-camada — porque isso torna o treinamento mais estável em modelos muito profundos.
 
-```
-Post-LN (original):   x + LayerNorm(SubLayer(x))
-Pre-LN  (moderno):    x + SubLayer(LayerNorm(x))
-```
+$$\text{Post-LN (original):} \quad x + \text{LayerNorm}(\text{SubLayer}(x))$$
+
+$$\text{Pre-LN (moderno):} \quad x + \text{SubLayer}(\text{LayerNorm}(x))$$
 
 A diferença parece sutil, mas Pré-LN permite treinar modelos com centenas de camadas sem que o gradiente exploda ou desapareça. LLaMA, Mistral e a maioria dos modelos recentes usam **RMSNorm**, uma variante mais eficiente que ignora a média e normaliza apenas pela variância.
 

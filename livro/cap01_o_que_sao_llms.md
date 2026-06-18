@@ -8,19 +8,15 @@ Um modelo de linguagem é uma função matemática treinada em grandes volumes d
 
 A fórmula fundamental é simples:
 
-```
-P(próxima_palavra | palavras_anteriores)
-```
+$$P(\text{próxima\_palavra} \mid \text{palavras\_anteriores})$$
 
 Dado um histórico de palavras, qual é a probabilidade de cada palavra possível ser a próxima? O modelo calcula essa distribuição de probabilidade e escolhe (ou amostra) a próxima palavra. Repete o processo, e você tem geração de texto.
 
 Formalmente, um modelo de linguagem autorregressivo modela a probabilidade conjunta de uma sequência como:
 
-```
-P(X₁, X₂, ..., X_T) = ∏ P(X_t | X_{<t})    para t = 1 até T
-```
+$$P(X_1, X_2, \dots, X_T) = \prod_{t=1}^{T} P(X_t \mid X_{<t})$$
 
-Onde X_{<t} representa todos os tokens anteriores (X₁, X₂, ..., X_{t-1}). Cada token é gerado condicionalmente a todos os tokens anteriores — essa é a formulação que fundamenta GPT, LLaMA, Mistral e todos os LLMs decoder-only modernos.
+Onde $X_{<t}$ representa todos os tokens anteriores $(X_1, X_2, \dots, X_{t-1})$. Cada token é gerado condicionalmente a todos os tokens anteriores — essa é a formulação que fundamenta GPT, LLaMA, Mistral e todos os LLMs decoder-only modernos.
 
 Quando dizemos **Large Language Model (LLM)**, estamos falando de modelos de linguagem com bilhões de parâmetros, treinados em trilhões de tokens de texto. A escala é o que transforma um corretor ortográfico sofisticado em algo que parece "inteligente". Modelos como GPT-4, LLaMA, Mistral e Qwen operam nessa escala — o LLaMA 3, por exemplo, foi treinado em 15 trilhões de tokens.
 
@@ -32,11 +28,9 @@ A ideia de modelar linguagem com matemática não nasceu ontem. LLMs são o resu
 
 O reverendo **Thomas Bayes** desenvolveu o que hoje chamamos de **Teorema de Bayes** — uma forma de atualizar a probabilidade de uma hipótese com base em novas evidências. Bayes morreu em 1761 sem publicar o trabalho; seu amigo **Richard Price** encontrou os manuscritos e os apresentou à Royal Society em 1763. A fórmula:
 
-```
-P(A|B) = P(B|A) × P(A) / P(B)
-```
+$$P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}$$
 
-Isso é a pedra fundamental de tudo que veio depois. Quando um LLM calcula "qual a próxima palavra mais provável dado o contexto", ele está calculando uma probabilidade condicional pura — P(X_t | X_{<t}). Não é inferência bayesiana no sentido estrito (o modelo não atualiza seus pesos ao ler o prompt), mas a herança de Bayes está no entendimento de como o histórico de eventos (contexto) altera a probabilidade do próximo evento. Toda a modelagem estatística de linguagem — de n-gramas a Transformers — descende dessa ideia.
+Isso é a pedra fundamental de tudo que veio depois. Quando um LLM calcula "qual a próxima palavra mais provável dado o contexto", ele está calculando uma probabilidade condicional pura — $P(X_t \mid X_{<t})$. Não é inferência bayesiana no sentido estrito (o modelo não atualiza seus pesos ao ler o prompt), mas a herança de Bayes está no entendimento de como o histórico de eventos (contexto) altera a probabilidade do próximo evento. Toda a modelagem estatística de linguagem — de n-gramas a Transformers — descende dessa ideia.
 
 ### Alan Turing e a máquina que pensa (1950)
 
