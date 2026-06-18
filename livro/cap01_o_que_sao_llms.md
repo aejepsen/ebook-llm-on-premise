@@ -17,10 +17,10 @@ Dado um histórico de palavras, qual é a probabilidade de cada palavra possíve
 Formalmente, um modelo de linguagem autorregressivo modela a probabilidade conjunta de uma sequência como:
 
 ```
-P(X₁, X₂, ..., X_T) = ∏ P(X_t | X₁, X₂, ..., X_{t-1})    para t = 1 até T
+P(X₁, X₂, ..., X_T) = ∏ P(X_t | X_{<t})    para t = 1 até T
 ```
 
-Cada token é gerado condicionalmente a todos os tokens anteriores — essa é a formulação que fundamenta GPT, LLaMA, Mistral e todos os LLMs decoder-only modernos.
+Onde X_{<t} representa todos os tokens anteriores (X₁, X₂, ..., X_{t-1}). Cada token é gerado condicionalmente a todos os tokens anteriores — essa é a formulação que fundamenta GPT, LLaMA, Mistral e todos os LLMs decoder-only modernos.
 
 Quando dizemos **Large Language Model (LLM)**, estamos falando de modelos de linguagem com bilhões de parâmetros, treinados em trilhões de tokens de texto. A escala é o que transforma um corretor ortográfico sofisticado em algo que parece "inteligente". Modelos como GPT-4, LLaMA, Mistral e Qwen operam nessa escala — o LLaMA 3, por exemplo, foi treinado em 15 trilhões de tokens.
 
