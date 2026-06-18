@@ -266,10 +266,9 @@ class FeedForwardClassic(nn.Module):
 
 Modelos recentes como LLaMA usam **SwiGLU**, uma variante estruturalmente diferente que usa **três projeções lineares** com gating element-wise (produto de Hadamard). Não é apenas trocar ReLU por SiLU — o mecanismo de gating é fundamentalmente diferente:
 
-```
-SwiGLU(x) = (SiLU(xW_gate) ⊙ xW_up) W_down
-onde SiLU(z) = z × sigmoid(z) e ⊙ = multiplicação element-wise
-```
+$$\text{SwiGLU}(x) = \left( \text{SiLU}(xW_{\text{gate}}) \odot xW_{\text{up}} \right) W_{\text{down}}$$
+
+onde $\text{SiLU}(z) = z \cdot \sigma(z)$ e $\odot$ = produto de Hadamard (element-wise)
 
 ```python
 class SwiGLUFeedForward(nn.Module):
