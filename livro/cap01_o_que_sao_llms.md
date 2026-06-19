@@ -1,3 +1,27 @@
+> *"A melhor forma de aprender é fazendo. E a melhor forma de ensinar é mostrando cada passo."*
+>
+> Este livro nasceu de uma escolha: usar uma RTX 3060 para construir um sistema multi-agente em produção. Não um tutorial de "hello world" — um gateway real (AI-Orchestrator), com 4 agentes, semantic router, fine-tuning LoRA, defesa contra injection, observabilidade com Langfuse e deploy on-premise.
+>
+> **Para quem é este livro:**
+> - **Iniciantes em AI Engineering** — cada conceito é explicado antes de ser usado. Só precisa de Python básico e terminal Linux.
+> - **Engenheiros migrando para LLMs** — foco em trade-offs reais: VRAM vs latência, LLM vs semantic router, fine-tune vs prompt engineering.
+> - **Quem quer controle total sobre seus dados** — tudo roda localmente, sem chamadas a APIs externas.
+>
+> **Como usar este livro:**
+> - Leitura linear (Cap 1→21) para a jornada completa do zero ao deploy.
+> - Leitura por partes: Parte I-II para inferência, Parte IV para fine-tuning, Parte V para RAG.
+> - Cada capítulo tem exercícios práticos. Faça-os.
+> - O [glossário](../glossario.md) define termos em negrito no texto.
+>
+> **O que você vai construir ao longo do livro:**
+> - Um chatbot local com streaming (Cap 4)
+> - Um pipeline RAG completo com Qdrant (Caps 14-17)
+> - Um classificador de injeção BERTimbau treinado por você (Cap 8)
+> - Um LoRA fine-tuned para roteamento (Cap 11)
+> - Um gateway multi-agente funcional com circuit breaker e Langfuse (Caps 18-21)
+>
+> Bora?
+
 # Capítulo 1 — O Que São LLMs e Por Que Rodar On-Premise
 
 ## 1.1 O que é um modelo de linguagem

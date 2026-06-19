@@ -227,7 +227,7 @@ trainer = SFTTrainer(
 )
 ```
 
-### Mascara de loss — treinando apenas nas respostas
+### Máscara de loss — treinando apenas nas respostas
 
 ```python
 # Mascara loss fora dos turnos do assistant

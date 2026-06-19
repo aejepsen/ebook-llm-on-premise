@@ -33,7 +33,7 @@
 
 | Ferramenta | Uso no livro | Site |
 |-----------|-------------|------|
-| Ollama | Inferência local de LLMs | https://ollama.ai |
+| Ollama | Inferência local de LLMs | https://ollama.com |
 | vLLM | Serving de alta performance | https://vllm.ai |
 | Unsloth | Fine-tuning LoRA otimizado | https://unsloth.ai |
 | LangGraph | Orquestração de agentes | https://langchain-ai.github.io/langgraph/ |

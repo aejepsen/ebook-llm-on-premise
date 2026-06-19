@@ -421,6 +421,50 @@ ficou mais consistente.
 
 ---
 
+## O sistema de avaliação do AI-Orchestrator: 5 gates de qualidade
+
+O AI-Orchestrator não foi para produção até passar por **5 gates de avaliação** automatizados. Esta metodologia é o padrão que recomendamos para qualquer LLM on-premise:
+
+| Gate | Script | Threshold | Resultado | O que avalia |
+|------|--------|-----------|-----------|--------------|
+| **GPU Benchmark** | `fase0_bench.py` | ≥5 tok/s | 17.97 tok/s PASS | Hardware mínimo viável |
+| **Routing** | `eval_routing.py` | ≥90% | 90.5% PASS | Classificação de intenção |
+| **Domains** | `eval_domains.py` | ≥80%/dom | 87.5% PASS | Tool-calling por domínio |
+| **Injection** | `eval_injection.py` | 0 leaks | 0/6 PASS | Resistência a ataques |
+| **Unit Tests** | `pytest` | ≥80% cov | 182 tests PASS | Cobertura de código |
+
+### Estrutura de um eval
+
+Cada eval usa o padrão: **golden dataset → execução → métrica → gate**.
+
+```python
+# evals/eval_routing.py — estrutura padrão de eval
+# 1. Carrega golden set: 64 perguntas com domínio esperado
+# 2. Para cada pergunta:
+#    a. Envia POST /chat para o gateway
+#    b. Extrai domínio roteado da resposta SSE
+#    c. Compara com o esperado
+# 3. Calcula acurácia: acertos / total
+# 4. Gate: acurácia >= 90%?
+
+GATE = 0.90
+golden = load_jsonl("evals/golden_routing.jsonl")  # 64 perguntas
+acertos = 0
+for caso in golden:
+    resultado = enviar_consulta(caso["pergunta"])
+    if resultado["dominio"] == caso["dominio_esperado"]:
+        acertos += 1
+
+acuracia = acertos / len(golden)
+print(f"Routing: {acuracia:.1%} {'PASS' if acuracia >= GATE else 'FAIL'}")
+```
+
+### Por que múltiplos gates?
+
+Um modelo pode passar em routing (classifica bem) mas falhar em domains (não executa tools corretamente). Ou passar em tudo mas ser vulnerável a injection. **Gates independentes evitam o viés de "média":** um modelo 90% bom em tudo pode ser 100% em routing e 0% em segurança — e você só descobre com gates separados.
+
+> **Gotcha real:** O primeiro fine-tune LoRA falhou no gate de injection (2/6 leaks). O problema estava no system prompt do router, não no modelo. Consertar o prompt (adicionar regra de SEGURANÇA + exemplo adversário) resolveu sem re-treinar. **Gates salvam deploys ruins.**
+
 ## Resumo do capítulo
 
 1. **Perplexidade** mede a confiança do modelo, mas não garante qualidade em produção.

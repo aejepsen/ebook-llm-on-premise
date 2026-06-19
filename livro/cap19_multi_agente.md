@@ -112,6 +112,43 @@ def sanitize(estado: EstadoGrafo) -> EstadoGrafo:
     }
 ```
 
+## O framework ADD: Model vs Harness
+
+Antes de mergulhar na implementação, é essencial entender uma distinção conceitual que estrutura todo o AI-Orchestrator: a separação entre **Model** e **Harness**, vinda do framework Agent-Driven Design (ADD).
+
+| Conceito | O que é | Responsabilidade | Exemplo no AI-Orchestrator |
+|----------|---------|------------------|----------------------------|
+| **Model** | O LLM (Qwen, Llama, etc.) | Raciocínio, geração, julgamento | `gateway/llm.py` — OllamaClient |
+| **Harness** | Todo o código ao redor | Prompts, tools, routing, validação, controle de fluxo | `gateway/graph.py`, `router.py`, `agents.py`, `sanitize.py` |
+| **Agente** | Model + Harness juntos | Executar tarefas com ferramentas | DomainAgentRunner (finanças, RH, estoque, vendas) |
+
+**Regra de ouro do ADD:** "Does this require reasoning/judgment?" → Model. "Is this structure, flow, or contract?" → Harness.
+
+O AI-Orchestrator implementa esta separação rigorosamente:
+- O **Model** nunca decide qual ferramenta é segura — o **Harness** (ToolRegistry) impõe escopo por domínio
+- O **Model** nunca escreve em memória persistente — o **Harness** (SQLite checkpointer) gerencia estado
+- O **Model** nunca define rotas — o **Harness** (semantic router → LLM classifier → lexical fallback) controla o fluxo
+
+### As 4 topologias de agentes
+
+O ADD cataloga 4 topologias. O AI-Orchestrator usa duas:
+
+1. **Pipeline:** sanitize → classify → dispatch → synthesize (sequencial, cada etapa tem contrato explícito)
+2. **Specialist Pool:** router classifica o domínio → dispatcher ativa o agente especialista (finanças OU rh OU estoque OU vendas)
+
+**Topologias NÃO usadas** (e por quê):
+3. **Hierarchical (Orchestrator + Workers):** overkill para 4 domínios com escopos bem definidos
+4. **Event-Driven (Mesh):** complexidade de debug não justificada em sistema single-node
+
+### Por que 4 agentes separados?
+
+O ADD define 5 gatilhos para decompor um agente monolítico em múltiplos. O AI-Orchestrator usou dois:
+
+- **Domain separation:** cada domínio tem vocabulário, invariantes e tool surfaces diferentes. O agente de finanças não precisa saber sobre férias (RH).
+- **Fault isolation:** se o serviço de RH cair, o circuit breaker isola o domínio — vendas continua funcionando.
+
+> **Princípio ADD:** "Start with a single agent. Decompose only when a concrete problem exists." O AI-Orchestrator começou com um agente monolítico. A decomposição em 4 veio quando tool calls cruzados começaram a confundir o modelo.
+
 ## Classificador de intenção: LLM + semântico + léxico
 
 O classificador decide quais agentes ativar. No AI-Orchestrator, opera em cascata:
@@ -549,6 +586,56 @@ O desconto máximo não é no prompt — é na API (HTTP 422). O modelo recebe o
 LLMs enviam parâmetros em lowercase. Se o banco usa case-sensitive, a query retorna vazio. Todo filtro textual deve usar `COLLATE NOCASE` (SQLite) ou `ILIKE` (Postgres).
 
 ---
+
+## Resiliência: Circuit Breaker por domínio
+
+Em produção, microsserviços falham. Se o serviço de RH estiver offline e o gateway continuar enviando requests, o sistema inteiro degrada. O AI-Orchestrator usa **Circuit Breaker** — padrão clássico de resiliência adaptado para agentes:
+
+```python
+# gateway/tools/circuit.py — Circuit Breaker por domínio
+import time
+from enum import Enum
+
+class State(Enum):
+    CLOSED = "closed"       # operação normal
+    OPEN = "open"           # bloqueado — falhas recentes
+    HALF_OPEN = "half_open" # testando recuperação
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 3, cooldown: float = 30.0):
+        self._threshold = failure_threshold
+        self._cooldown = cooldown
+        self._state = State.CLOSED
+        self._failures = 0
+        self._last_failure = 0.0
+
+    def call(self, func, *args, **kwargs):
+        if self._state == State.OPEN:
+            if time.monotonic() - self._last_failure > self._cooldown:
+                self._state = State.HALF_OPEN  # testa recuperação
+            else:
+                raise CircuitOpenError("Circuito aberto — domínio indisponível")
+
+        try:
+            result = func(*args, **kwargs)
+            if self._state == State.HALF_OPEN:
+                self._state = State.CLOSED  # recuperado!
+            self._failures = 0
+            return result
+        except Exception as e:
+            self._failures += 1
+            self._last_failure = time.monotonic()
+            if self._failures >= self._threshold:
+                self._state = State.OPEN
+            raise e
+```
+
+**Regras do AI-Orchestrator:**
+- **3 falhas de transporte** (timeout, connection refused) → circuito ABERTO por 30s
+- **Erros 4xx NÃO contam** — são erros de negócio (produto não encontrado, saldo insuficiente), não de infraestrutura
+- **Half-open:** após 30s, o próximo request serve como teste — se passar, fecha o circuito
+
+Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independente. Se o RH cair, vendas continua funcionando normalmente.
 
 ## Resumo
 

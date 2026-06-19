@@ -447,6 +447,66 @@ No AI-Orchestrator, a camada de roteamento semântico usa Qdrant (RAG vetorial s
 
 ---
 
+## Construindo um Knowledge Graph progressivo
+
+O RAG Cookbook (Polzer, 2025) ensina Graph RAG em 5 etapas progressivas — mesma abordagem que recomendamos:
+
+### Etapa 1: Grafo básico
+Crie nós e relacionamentos a partir de dados estruturados (CSV, JSON):
+
+```cypher
+// Criar empresa e seus SLAs
+CREATE (c:Company {name: 'Acme Corp', industry: 'Tech'})
+CREATE (s:SLA {id: 'SLA-001', uptime: '99.9%', provider: 'AWS'})
+CREATE (c)-[:HAS_SLA]->(s)
+```
+
+### Etapa 2: Enriquecimento
+Adicione dados de múltiplas fontes (endereços, gastos, fornecedores):
+
+```cypher
+// Enriquecer com dados financeiros
+LOAD CSV WITH HEADERS FROM 'file:///spend_2024.csv' AS row
+MATCH (c:Company {name: row.company})
+CREATE (c)-[:SPENT {amount: toInteger(row.amount), quarter: row.quarter}]->(:Vendor {name: row.vendor})
+```
+
+### Etapa 3: Cypher queries para RAG
+Traduza perguntas do usuário em queries de grafo:
+
+```python
+# Template: pergunta → Cypher query → contexto → LLM
+pergunta = "Quais fornecedores a Acme Corp usou em 2024?"
+cypher = """
+MATCH (c:Company {name: 'Acme Corp'})-[s:SPENT]->(v:Vendor)
+WHERE s.quarter CONTAINS '2024'
+RETURN v.name, sum(s.amount) as total
+ORDER BY total DESC
+"""
+contexto = neo4j.run(cypher)
+resposta = llm.generate(f"Contexto: {contexto}\nPergunta: {pergunta}")
+```
+
+### Etapa 4: Embeddings no Neo4j
+Gere embeddings dos nós para busca semântica híbrida (grafo + vetor):
+
+```cypher
+// Criar índice vetorial para busca semântica em documentos
+CREATE VECTOR INDEX document_embeddings IF NOT EXISTS
+FOR (d:Document) ON d.embedding
+OPTIONS {indexConfig: {
+    `vector.dimensions`: 384,
+    `vector.similarity_function`: 'cosine'
+}}
+```
+
+### Etapa 5: Otimização
+- **Índices:** crie índices em propriedades frequentemente consultadas (`CREATE INDEX company_name FOR (c:Company) ON c.name`)
+- **Paginação:** limite resultados com `SKIP`/`LIMIT` para não sobrecarregar o contexto do LLM
+- **Desnormalização seletiva:** duplique dados frequentemente acessados como propriedades de nós para evitar joins
+
+> **Quando usar Graph RAG vs Vector RAG:** Use Graph RAG quando as relações entre entidades são tão importantes quanto o conteúdo (ex: "quais fornecedores da Acme também atendem a concorrente X?"). Use Vector RAG para busca semântica em documentos não estruturados.
+
 ## Resumo
 
 | Componente | Tecnologia | Quando usar |

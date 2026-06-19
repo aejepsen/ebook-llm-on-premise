@@ -61,7 +61,7 @@ O binding Python permite integrar llama.cpp em aplicações:
 ```python
 """
 Exemplo de inferencia com llama-cpp-python.
-Instalacao: pip install llama-cpp-python
+Instalação: pip install llama-cpp-python
 Com GPU: CMAKE_ARGS="-DGGML_CUDA=ON" pip install llama-cpp-python
 """
 from llama_cpp import Llama
@@ -74,7 +74,7 @@ llm = Llama(
     verbose=False,
 )
 
-# Geracao simples
+# Geração simples
 resposta = llm(
     "Explique o que e quantizacao em 2 frases.",
     max_tokens=128,
@@ -234,14 +234,14 @@ Para workflows com muitas requisicoes compartilhando prefixos (ex: RAG, few-shot
 ```python
 """
 SGLang -- exemplo de inferencia offline.
-Instalacao: pip install "sglang[all]"
+Instalação: pip install "sglang[all]"
 """
 import sglang as sgl
 
 # Inicializar engine offline
 llm = sgl.Engine(model_path="Qwen/Qwen3-8B-AWQ")
 
-# Geracao em lote
+# Geração em lote
 prompts = [
     "Explique machine learning em uma frase.",
     "O que e transfer learning?",
@@ -298,7 +298,7 @@ O TensorRT-LLM e o framework da NVIDIA para extrair performance máxima de GPUs 
 ```python
 """
 TensorRT-LLM -- exemplo minimo.
-Instalacao: pip install tensorrt_llm
+Instalação: pip install tensorrt_llm
 Requer GPU NVIDIA com drivers recentes.
 """
 from tensorrt_llm import LLM, SamplingParams
@@ -428,7 +428,7 @@ services:
               count: 1
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -502,6 +502,60 @@ curl http://localhost:11434/api/chat -d '{
 ```
 
 ---
+
+## Construindo um servidor LLM do zero
+
+Antes de depender de frameworks como Ollama e vLLM, é instrutivo entender o que acontece dentro deles. O repositório `llm-model-inference` (Wang & Hu, 2025) contém uma implementação completa de um servidor LLM em Python puro que ilustra todos os conceitos que discutimos:
+
+```
+servidor_llm/
+├── model_executor.py    # Executa forward pass do modelo (GPU/CPU)
+├── model_manager.py     # Carrega/descarrega modelos da memória
+├── model_worker.py      # Worker que processa requests individuais
+├── workload_manager.py  # Orquestra batching, fila, prioridades
+└── main.py              # API Flask que expõe /generate e /chat
+```
+
+### Workload Manager: o cérebro do servidor
+
+O workload manager decide quando formar batches, quais requests agrupar e quando fazer streaming:
+
+```python
+# Padrão simplificado de workload manager
+class WorkloadManager:
+    def __init__(self, max_batch_size: int = 8):
+        self._fila: list[Request] = []
+        self._max_batch = max_batch_size
+
+    def submit(self, request: Request):
+        self._fila.append(request)
+        if len(self._fila) >= self._max_batch:
+            self._process_batch()
+
+    def _process_batch(self):
+        batch = self._fila[:self._max_batch]
+        self._fila = self._fila[self._max_batch:]
+        # Prefill: processa todos os prompts em paralelo
+        prefill_outputs = model.prefill([r.prompt for r in batch])
+        # Decode: geração autoregressiva com KV cache
+        for r, kv in zip(batch, prefill_outputs):
+            response = model.decode(r.max_tokens, kv_cache=kv)
+            r.callback(response)  # streaming para o cliente
+```
+
+### O que Ollama e vLLM adicionam
+
+Construir o servidor do zero revela o que os frameworks abstraem:
+
+| Componente | Implementação manual | Ollama | vLLM |
+|-----------|---------------------|--------|------|
+| Carregamento de modelo | `torch.load` + `to(device)` | `ollama pull` | HF auto-download |
+| KV cache | Alocado manualmente | Gerenciado pelo llama.cpp | PagedAttention |
+| Batching | Lógica manual de fila | Interno (opaco) | Continuous batching |
+| API HTTP | Flask/FastAPI manual | REST na porta 11434 | OpenAI-compatible |
+| Quantização | Conversão manual GGUF | Integrado | GPTQ/AWQ/FP8 |
+
+> **Exercício:** Implemente um servidor mínimo com Flask + Transformers que aceita POST /generate e retorna `{"response": "..."}`. Depois compare a performance com o Ollama. A diferença de throughput vai deixar claro por que usamos frameworks em produção.
 
 ## Resumo do capítulo
 

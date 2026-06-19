@@ -35,9 +35,11 @@ Livro prático de AI Engineering para iniciantes — do zero ao deploy de modelo
 18. [Benchmarking e monitoramento](livro/cap18_benchmarking.md)
 19. [Arquitetura multi-agente on-premise](livro/cap19_multi_agente.md)
 20. [Segurança e governança de LLMs locais](livro/cap20_seguranca_governanca.md)
+21. [MLOps para LLMs On-Premise](livro/cap21_mlops_llm_on_premise.md)
 
 ### Referências
 - [Bibliografia e fontes](referencias/bibliografia.md)
+- [Glossário](glossario.md)
 
 ## Notebooks
 
@@ -62,6 +64,8 @@ Cada capítulo possui um notebook correspondente na pasta `notebooks/`, com expl
 | `cap16_rag_agentes.ipynb` | 16 | RAG agentic com LangGraph |
 | `cap17_graph_rag.ipynb` | 17 | Graph RAG com Neo4j |
 | `cap18_benchmarking.ipynb` | 18 | Benchmarking de serving |
+
+> **Nota:** Os capítulos 19 (Multi-Agente), 20 (Segurança) e 21 (MLOps) documentam a arquitetura e código do AI-Orchestrator — não possuem notebooks dedicados, pois seu conteúdo prático está no código-fonte do projeto (`gateway/`, `services/`, `evals/`).
 
 ## Como usar
 

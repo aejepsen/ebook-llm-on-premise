@@ -17,7 +17,7 @@ ollama pull llama3.2:3b
 
 O que acontece nos bastidores:
 
-1. O Ollama consulta o registro de modelos (registry.ollama.ai)
+1. O Ollama consulta o registro de modelos (registry.ollama.com)
 2. Baixa os arquivos do modelo no formato GGUF (quantizado)
 3. Armazena em `~/.ollama/models/`
 4. Verifica a integridade via hash SHA256
@@ -279,7 +279,7 @@ import json
 import requests
 from typing import Generator
 
-# Configuracao do modelo
+# Configuração do modelo
 OLLAMA_URL = "http://localhost:11434/api/chat"
 MODELO = "llama3.2:3b"
 
@@ -313,7 +313,7 @@ def enviar_mensagem(
                 token = dados.get("message", {}).get("content", "")
                 if token:
                     yield token
-                # Quando done=True, a geracao terminou
+                # Quando done=True, a geração terminou
                 if dados.get("done", False):
                     break
 
@@ -397,7 +397,7 @@ python chatbot_ollama.py
 Voce: O que e KV cache?
 
 llama3.2:3b: KV cache (Key-Value cache) e uma tecnica de otimizacao
-usada em modelos Transformer durante a fase de geracao de texto.
+usada em modelos Transformer durante a fase de geração de texto.
 Quando o modelo gera tokens sequencialmente, ele precisa recalcular
 a atencao sobre todos os tokens anteriores. O KV cache armazena os
 vetores Key e Value ja computados, evitando recalculos redundantes
@@ -425,7 +425,27 @@ Neste capítulo você:
 
 No próximo capítulo, vamos mergulhar na **quantização** -- a técnica que torna possível rodar modelos de 70 bilhoes de parâmetros em uma única GPU de consumo.
 
+> **A jornada deste livro:** O projeto AI-Orchestrator — que serve de fio condutor para este livro — passou por uma evolução real de modelos que ilustra perfeitamente os trade-offs que você vai enfrentar:
+>
+> | Fase | Modelo | VRAM | Latência/task | Acurácia Routing | Por que mudou |
+> |------|--------|------|---------------|------------------|---------------|
+> | **PoC** | `qwen3:30b-a3b` (MoE Q4) | 12 GB GPU + 8 GB RAM | ~55s | 90.5% | Mais capaz, mas 44% transbordava para CPU |
+> | **Baseline** | `qwen2.5:7b-instruct-q4_K_M` | 100% GPU | ~7s | 90.5% | 8× mais rápido, mesma acurácia de routing |
+> | **Produção** | `qwen3.5-9b-orch` (LoRA) | 100% GPU | ~2-4s | 90.5% | Fine-tuned, +5pp em domínios, 14× mais rápido que PoC |
+>
+> **Lição:** O modelo mais capaz (30B MoE) era o pior para produção. O fine-tuning LoRA de um modelo 9B produziu o melhor equilíbrio entre latência, acurácia e custo de hardware. Esta jornada — escolher, medir, otimizar e especializar — é exatamente o que você aprenderá nos próximos capítulos.
+
 ---
+
+## Exercícios
+
+1. **Escolha seu modelo:** Instale 3 modelos de famílias diferentes (Llama, Qwen, Phi) via `ollama pull`. Teste cada um com a mesma pergunta complexa ("Explique o que é backpropagation e por que ela é importante"). Qual respondeu melhor? Qual foi mais rápido? Qual usou mais VRAM? (monitore com `nvidia-smi`).
+
+2. **API em outra linguagem:** Reimplemente o chatbot da seção 4.8 em uma linguagem diferente (JavaScript/Node.js, Go, Rust). A API REST do Ollama é agnóstica de linguagem.
+
+3. **Batching manual:** Use o script de benchmark da seção 6.8 para enviar 3 prompts simultaneamente (threads ou `asyncio.gather`). Compare o throughput total com o benchmark sequencial.
+
+4. **Custo do contexto:** Gere uma resposta curta (50 tokens) e uma longa (500 tokens) no mesmo modelo. Use `nvidia-smi` para medir a VRAM usada. Quanto de VRAM adicional a resposta longa consumiu? (Isso é o KV cache em ação — Capítulo 6.)
 
 ## Fontes
 

@@ -457,6 +457,53 @@ Para medir essas métricas, você precisa de um **evaluation set** — um conjun
 
 ---
 
+## De nomic-embed-text a SBERT: a evolução do embedding no AI-Orchestrator
+
+O pipeline RAG que você construiu usa `nomic-embed-text` via Ollama — excelente para começar, pois não requer dependências extras. Mas em produção, o AI-Orchestrator migrou para **SBERT** (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dimensões, CPU). Por quê?
+
+| Critério | nomic-embed-text (Ollama) | SBERT MiniLM |
+|----------|--------------------------|--------------|
+| **Dependência** | Requer Ollama rodando | Apenas `sentence-transformers` |
+| **Inicialização** | Precisa de `ollama pull` | Download automático na build |
+| **Dimensão** | 768 | 384 (mais compacto) |
+| **Hardware** | GPU (via Ollama) | CPU (inferência rápida) |
+| **Latência** | ~50-80ms | ~5-15ms |
+| **Português** | Suporte multilingue OK | Otimizado para multilingue |
+
+### Embedder Protocol: abstraindo a implementação
+
+O gateway do AI-Orchestrator usa um padrão Strategy para trocar de embedder sem alterar o código:
+
+```python
+# gateway/embedder.py — Embedder Protocol
+from typing import Protocol
+
+class Embedder(Protocol):
+    """Interface para geradores de embedding."""
+    def embed(self, textos: list[str]) -> list[list[float]]: ...
+    @property
+    def dimension(self) -> int: ...
+
+class SBERTEmbedder:
+    """Embedder primário — SBERT CPU, sem dependência do Ollama."""
+    def __init__(self):
+        from sentence_transformers import SentenceTransformer
+        self._model = SentenceTransformer(
+            "paraphrase-multilingual-MiniLM-L12-v2"
+        )
+    def embed(self, textos): ...
+    @property
+    def dimension(self): return 384
+
+class OllamaEmbedder:
+    """Fallback — Ollama com nomic-embed-text."""
+    def embed(self, textos): ...
+    @property
+    def dimension(self): return 768
+```
+
+> **Regra prática:** Comece com `nomic-embed-text` (simples, didático). Em produção, migre para SBERT (mais rápido, sem depender do Ollama estar rodando para embeddings).
+
 ## Resumo
 
 | Conceito | Decisão |
@@ -480,3 +527,13 @@ RAG é o padrão de facto para dar contexto a LLMs. Com Ollama + Qdrant, todo o 
 - Nomic AI. *nomic-embed-text: A Reproducible Long Context Text Embedder*. https://huggingface.co/nomic-ai/nomic-embed-text-v1.5
 - Projeto AI-Orchestrator — `gateway/semantic_router.py` (uso de Qdrant + nomic-embed-text para roteamento semântico).
 - *RAG with Python Cookbook*, Capítulos 1, 5 e 6 — introdução a RAG, embeddings e bancos vetoriais.
+
+## Exercícios
+
+1. **Migre de embedder:** Substitua `nomic-embed-text` por `sentence-transformers` no código da seção 14.3. Meça a latência de embedding com cada um. Qual é mais rápido? Por quê?
+
+2. **Compare bancos vetoriais:** Implemente a mesma busca semântica (mesmo dataset, mesmos embeddings) no Qdrant e no ChromaDB. Compare: latência de busca, complexidade de setup, features.
+
+3. **Pipeline RAG mínimo:** Construa um pipeline RAG funcional com ≤100 linhas de Python: ingestão de texto → chunking → embeddings → índice Qdrant → busca → geração. Use o Ollama para embedding e geração. O que foi mais difícil?
+
+4. **Debug de RAG:** Pegue uma resposta ruim do RAG (alucinação ou irrelevante). Inspecione: (a) quais chunks foram recuperados, (b) o prompt enviado ao LLM, (c) a similaridade dos chunks com a pergunta. Proponha uma correção (chunking, top-K, prompt, embedding).

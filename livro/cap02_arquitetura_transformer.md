@@ -548,6 +548,8 @@ BERT e T5 permanecem relevantes em nichos específicos: BERT para embeddings de 
 - O KV Cache torna a geração viável ao reutilizar Keys/Values de tokens anteriores
 - BERT (compreensão), GPT (geração) e T5 (seq-to-seq) são as três famílias históricas; decoder-only domina desde 2023
 
+> **Explore na prática:** O notebook `ch2_Inside_the_Mind_of_a_Transformer.ipynb` do repositório `llm-model-inference` (Wang & Hu, 2025) permite visualizar os pesos de atenção, observar como diferentes heads capturam relações sintáticas e semânticas, e modificar manualmente os embeddings posicionais. Execute-o com frases em português e compare os padrões de atenção com textos em inglês — heads sintáticas são consistentes entre línguas; heads semânticas variam.
+
 ---
 
 ## Fontes

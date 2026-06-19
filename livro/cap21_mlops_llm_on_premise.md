@@ -779,6 +779,22 @@ As 6 ações para chegar ao Nível 2:
 
 ---
 
+## MAST Failure Taxonomy: 14 modos de falha em agentes
+
+O catálogo Agents Integration Patterns mapeou 14 modos de falha empiricamente observados em sistemas multi-agente (Cemri et al., NeurIPS 2025, 1.600+ traces analisados, 41-86.7% de taxa de falha). O AI-Orchestrator mitiga os 5 mais relevantes:
+
+| Modo de falha | Categoria | Mitigação no AI-Orchestrator |
+|---------------|-----------|------------------------------|
+| **Tool parameter mismatch** | Execution | OpenAPI schema validation no `ToolRegistry` — argumentos validados antes do call |
+| **Missing tool capability** | Specification | ToolRegistry retorna lista de ferramentas disponíveis como feedback ao modelo |
+| **Context overflow** | Communication | `max_seq_length=4096` + chunking de histórico (últimas 20 mensagens) |
+| **Agent hallucinated tool call** | Execution | `train_on_responses_only` + LoRA fine-tune + eval gate de domains ≥80% |
+| **Unauthorized action attempt** | Security | Least-Privilege Tool Scope — cada domínio só vê suas ferramentas |
+
+**Lição de produção:** "Integration patterns are how you engineer reliability that scaling the model cannot buy." O fine-tuning melhorou o tool-calling, mas foram os padrões de Harness (circuit breaker, tool registry com validação, least-privilege scope) que eliminaram as falhas catastróficas.
+
+---
+
 ## Resumo
 
 MLOps para LLMs on-premise não é um luxo — é o que separa uma demo de um produto. As 7 etapas formam um ciclo onde cada uma reforça as outras:
@@ -791,5 +807,56 @@ Containerização → Config → Serving → Testes → Observabilidade → Segu
 ```
 
 O AI-Orchestrator demonstra que é possível implementar MLOps real — containerização multi-stage, configuração imutável, 3 suites de eval com gates quantitativos, observabilidade nativa com Langfuse, e 5 camadas de segurança — mesmo em uma PoC single-node com uma RTX 3060.
+
+### Notas de produção
+
+**SSE Heartbeat:** Para manter a conexão Server-Sent Events viva durante delays de LLM (>15s), o gateway envia heartbeats periódicos:
+
+```python
+# gateway/server.py — heartbeat via SSE comment
+async def liveness_heartbeat(interval: float = 5.0):
+    while True:
+        await asyncio.sleep(interval)
+        yield {"event": "heartbeat", "data": ""}
+```
+
+Sem heartbeat, proxies como Nginx e Cloudflare fecham conexões inativas após 60-120s, quebrando a experiência de streaming.
+
+**Rate Limiter por IP:** O `gateway/security.py` implementa sliding window rate limiting com `max_entries=10000`:
+
+```python
+# gateway/security.py — RateLimiter sliding window
+from collections import defaultdict
+import time
+
+class RateLimiter:
+    def __init__(self, max_requests: int = 30, window: float = 60.0):
+        self._max = max_requests
+        self._window = window
+        self._clients: dict[str, list[float]] = defaultdict(list)
+
+    def check(self, client_ip: str) -> bool:
+        agora = time.monotonic()
+        self._clients[client_ip] = [
+            t for t in self._clients[client_ip] if agora - t < self._window
+        ]
+        if len(self._clients[client_ip]) >= self._max:
+            return False  # bloqueado
+        self._clients[client_ip].append(agora)
+        return True
+```
+
+**Cloudflare Tunnel:** Para expor o gateway on-premise sem abrir portas no roteador, o AI-Orchestrator usa `cloudflared tunnel`:
+
+```bash
+# Deploy com Cloudflare Tunnel (produção em suasalada.com.br)
+cloudflared tunnel create orchestrator
+cloudflared tunnel route dns orchestrator suasalada.com.br
+cloudflared tunnel run --url http://localhost:8000 orchestrator
+```
+
+Isso elimina a necessidade de port forwarding, DDNS, ou certificados SSL manuais — o túnel gerencia tudo.
+
+> **Exercício final:** Documente seu próprio setup MLOps. Desenhe o diagrama de deploy (serviços, portas, dependências). Liste os pontos únicos de falha. Proponha 3 melhorias para produção.
 
 O gap para produção é claro e quantificável: CI/CD automatizado, model registry e IaC. São 6 ações concretas. Nenhuma exige reescrever o sistema — apenas automatizar o que já é feito manualmente.

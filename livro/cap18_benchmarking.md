@@ -546,15 +546,15 @@ Usuario → Gateway /chat → LangGraph Pipeline → Ollama
                   PostgreSQL
 ```
 
-Cada request `POST /chat` cria exatamente 1 trace. Cada no do grafo (sanitize, classify, dispatch, synthesize) abre 1 span dentro desse trace. Cada chamada ao Ollama — seja para classificacao semantica, execucao de agente ou sintese — registra 1 generation com input/output/tokens.
+Cada request `POST /chat` cria exatamente 1 trace. Cada nó do grafo (sanitize, classify, dispatch, synthesize) abre 1 span dentro desse trace. Cada chamada ao Ollama — seja para classificação semântica, execução de agente ou síntese — registra 1 generation com input/output/tokens.
 
-### Implementacao real: Tracer com degradacao graceful
+### Implementação real: Tracer com degradação graceful
 
-O ponto critico: Langfuse e observabilidade, nao e parte do caminho critico. Se o Langfuse cair, o gateway **deve continuar funcionando**. A implementacao usa o padrao noop handle:
+O ponto crítico: Langfuse é observabilidade, não é parte do caminho crítico. Se o Langfuse cair, o gateway **deve continuar funcionando**. A implementação usa o padrão noop handle:
 
 ```python
 # gateway/tracing.py
-# Tracer com degradacao graceful — Langfuse offline nao afeta requests
+# Tracer com degradação graceful — Langfuse offline não afeta requests
 
 from langfuse import Langfuse
 import logging
@@ -565,8 +565,8 @@ logger = logging.getLogger(__name__)
 class TraceHandle:
     """Wrapper seguro sobre trace do Langfuse.
 
-    Nunca lanca excecao. Se Langfuse estiver offline,
-    todos os metodos sao noop — o request continua normalmente.
+    Nunca lança exceção. Se Langfuse estiver offline,
+    todos os métodos são noop — o request continua normalmente.
     """
 
     def __init__(self, trace):
@@ -631,7 +631,7 @@ class GenerationHandle:
 class Tracer:
     """Ponto de entrada para tracing.
 
-    Inicializa conexao com Langfuse. Se falhar,
+    Inicializa conexão com Langfuse. Se falhar,
     opera em modo noop sem impactar o pipeline.
     """
 
@@ -659,27 +659,27 @@ class Tracer:
 
 O padrao e simples: cada classe wrappa o objeto real do SDK e captura qualquer excecao. O chamador nunca precisa saber se o Langfuse esta online ou offline. Isso e essencial para producao — observabilidade nao pode ser ponto unico de falha.
 
-### Metricas coletadas via Langfuse
+### Métricas coletadas via Langfuse
 
 Com traces estruturados, o Langfuse coleta automaticamente:
 
-| Metrica | Onde | Exemplo |
+| Métrica | Onde | Exemplo |
 |---------|------|---------|
-| Latencia por camada | Span duration | sanitize: 12ms, classify: 340ms, dispatch: 8200ms |
+| Latência por camada | Span duration | sanitize: 12ms, classify: 340ms, dispatch: 8200ms |
 | Tokens in/out | Generation usage | input: 1200, output: 380 |
 | Modelo utilizado | Generation model | qwen2.5:7b-instruct-q4_K_M |
-| Routing layer | Span metadata | semantic (rapido) vs LLM (lento) |
+| Routing layer | Span metadata | semantic (rápido) vs LLM (lento) |
 | Injection blocks | Span output | 3 tentativas bloqueadas em sanitize |
 | Erros por camada | Span status | timeout no agente de RH |
-| Dominios acionados | Trace metadata | ["estoque", "financas"] |
+| Domínios acionados | Trace metadata | ["estoque", "finanças"] |
 
-### Dashboard de metricas: endpoint /metrics
+### Dashboard de métricas: endpoint /metrics
 
-O gateway expoe um endpoint `GET /metrics` que agrega dados do Langfuse com cache de 30 segundos. O frontend React consome e exibe cards em tempo real:
+O gateway expõe um endpoint `GET /metrics` que agrega dados do Langfuse com cache de 30 segundos. O frontend React consome e exibe cards em tempo real:
 
 ```python
 # gateway/metrics.py
-# Endpoint de metricas agregadas com cache
+# Endpoint de métricas agregadas com cache
 
 import time
 from functools import lru_cache
@@ -700,7 +700,7 @@ class MetricasAgregadas:
 
 
 class MetricsCollector:
-    """Coleta e agrega metricas do Langfuse."""
+    """Coleta e agrega métricas do Langfuse."""
 
     CACHE_TTL = 30  # segundos
 
@@ -710,7 +710,7 @@ class MetricsCollector:
         self._cache_ts: float = 0
 
     def get_metrics(self) -> MetricasAgregadas:
-        """Retorna metricas agregadas com cache de 30s."""
+        """Retorna métricas agregadas com cache de 30s."""
         agora = time.monotonic()
         if self._cache and (agora - self._cache_ts) < self.CACHE_TTL:
             return self._cache
@@ -800,7 +800,7 @@ LANGFUSE_NEXTAUTH_SECRET=$(openssl rand -base64 32)
 LANGFUSE_SALT=$(openssl rand -base64 32)
 ```
 
-No gateway, as variaveis de conexao:
+No gateway, as variáveis de conexão:
 
 ```bash
 LANGFUSE_HOST=http://langfuse:3000
@@ -823,6 +823,45 @@ LLMs sao fundamentalmente diferentes de software deterministico. A mesma entrada
 5. **Reproducao de falhas.** Com o trace completo (prompt, contexto, model config), voce pode reproduzir qualquer falha em ambiente de desenvolvimento. Sem isso, bugs de LLM sao historias que ninguem consegue verificar.
 
 ---
+
+## Avaliando a qualidade do RAG
+
+Além das métricas de serving (TTFT, TPS, throughput), sistemas RAG precisam de métricas de **qualidade de resposta**. O RAG Cookbook define 4 métricas essenciais:
+
+| Métrica | O que mede | Pergunta respondida |
+|---------|-----------|---------------------|
+| **Faithfulness** | A resposta é fiel ao contexto recuperado? | "O modelo inventou algo que não está nos documentos?" |
+| **Context Precision** | Os chunks recuperados são relevantes? | "Dos 5 chunks retornados, quantos realmente importam?" |
+| **Context Recall** | Recuperamos tudo que era relevante? | "Faltou algum documento importante?" |
+| **Answer Relevance** | A resposta responde à pergunta? | "O modelo divagou ou foi direto ao ponto?" |
+
+### Exemplo: medindo faithfulness
+
+```python
+# Avaliação de faithfulness com LLM-as-Judge
+def avaliar_faithfulness(pergunta: str, contexto: list[str], resposta: str) -> float:
+    """Usa um LLM para julgar se a resposta é fiel ao contexto."""
+    prompt = f"""
+    Pergunta: {pergunta}
+    Contexto: {contexto}
+    Resposta: {resposta}
+
+    A resposta contém alguma informação que NÃO está presente no contexto?
+    Responda apenas SIM ou NÃO.
+    """
+    julgamento = llm.generate(prompt)
+    return 0.0 if "SIM" in julgamento else 1.0
+```
+
+### Valores de referência (AI-Orchestrator)
+
+| Métrica | Baseline (7B) | LoRA 9B |
+|---------|--------------|---------|
+| Faithfulness | 0.82 | 0.89 |
+| Context precision | 0.88 | 0.92 |
+| Context recall | 0.85 | 0.87 |
+
+> **Regra:** Faithfulness < 0.80 → revisar prompts e recuperação. Context precision < 0.80 → melhorar chunking. Context recall < 0.80 → aumentar top-K ou melhorar embeddings.
 
 ## Resumo
 

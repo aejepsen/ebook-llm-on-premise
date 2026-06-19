@@ -472,6 +472,52 @@ def reindexar_com_purge(pontos_novos: list[dict]):
 
 Este padrão — upsert + purge por `batch_id` — é essencial quando a fonte de dados é mutável. Sem o purge, vetores de documentos deletados permanecem no índice como "fantasmas", poluindo resultados para sempre. No AI-Orchestrator, essa lição foi aprendida na prática: o golden set de roteamento é estático, mas documentos corporativos não são.
 
+## Estratégias de chunking comparadas
+
+O RAG Cookbook (Polzer, 2025) documenta 5 estratégias de chunking com diferentes trade-offs. Qual você deve usar?
+
+| Estratégia | Como funciona | Tamanho típico | Melhor para |
+|-----------|---------------|----------------|-------------|
+| **Fixed-size** | Divide por número fixo de caracteres | 500-1000 chars | Documentos homogêneos, protótipos |
+| **Recursive** | Divide por parágrafos, depois frases, depois palavras | Variável | Documentos estruturados (markdown, HTML) |
+| **Semantic** | Usa embeddings para detectar mudanças de tópico | Variável | Documentos com múltiplos temas |
+| **Sentence-based** | Divide por sentenças (spaCy/nltk) | 1-5 sentenças | Texto jurídico, contratos |
+| **Agentic** | Um LLM decide os pontos de corte | Variável | Documentos complexos, edge cases |
+
+### Exemplo: recursive splitting com overlap
+
+```python
+# Estratégia recursive splitting — usada no AI-Orchestrator
+TAMANHO_CHUNK = 500
+OVERLAP = 50
+
+def recursive_split(texto: str) -> list[str]:
+    chunks = []
+    inicio = 0
+    while inicio < len(texto):
+        fim = inicio + TAMANHO_CHUNK
+        chunk = texto[inicio:fim].strip()
+        if chunk:
+            chunks.append(chunk)
+        inicio += TAMANHO_CHUNK - OVERLAP  # overlap de 50 chars
+    return chunks
+```
+
+### Reranking: melhorando a qualidade do retrieval
+
+Após a busca vetorial retornar os top-K chunks, um **reranker** reordena os resultados por relevância semântica mais precisa:
+
+```
+Busca inicial (Qdrant):    Reranking (cross-encoder):
+  chunk_1: 0.89              chunk_3: 0.94  ← reposicionado!
+  chunk_2: 0.82              chunk_1: 0.87
+  chunk_3: 0.78              chunk_2: 0.71
+```
+
+Modelos de reranking como `cross-encoder/ms-marco-MiniLM-L-6-v2` ou `BAAI/bge-reranker-v2-m3` (multilíngue) são mais precisos que similaridade de cosseno pura, mas mais lentos — use apenas nos top-K resultados, não no dataset inteiro.
+
+> **Regra prática:** Fixed-size para começar. Recursive + overlap para produção. Adicione reranking quando a qualidade do retrieval for o gargalo.
+
 ## Na prática: indexando documentos corporativos
 
 Vamos juntar tudo em um script que indexa documentos de um diretório corporativo.
@@ -570,6 +616,58 @@ if __name__ == "__main__":
 ```
 
 ---
+
+## Semantic Router em produção: além da similaridade simples
+
+O AI-Orchestrator usa o Qdrant não apenas para busca vetorial básica, mas como um **roteador semântico** com três mecanismos que garantem confiabilidade em produção:
+
+### 1. Conjunto dourado (golden set)
+
+Em vez de indexar documentos genéricos, o semantic router indexa um **conjunto dourado** de 64 perguntas de exemplo (`evals/golden_routing.jsonl`), cada uma anotada com o domínio correto. Cada nova pergunta do usuário é comparada contra este conjunto — se houver uma correspondência forte, o domínio é determinado sem chamar o LLM.
+
+### 2. Consenso Top-K
+
+Não basta o vizinho mais próximo (top-1) indicar um domínio. O semantic router verifica se os **K vizinhos mais próximos concordam**:
+
+```python
+# gateway/semantic_router.py — lógica de consenso
+top_k = client.search(collection, query_vector, limit=5)
+dominios = [hit.payload["dominio"] for hit in top_k]
+# Consenso: maioria dos K vizinhos concorda?
+from collections import Counter
+mais_comum = Counter(dominios).most_common(1)[0]
+if mais_comum[1] >= 3:  # pelo menos 3 dos 5 concordam
+    return mais_comum[0]  # domínio determinado
+```
+
+### 3. Score gap filter
+
+Se o vizinho mais próximo (top-1) e o segundo (top-2) tiverem scores muito próximos, a decisão é incerta — o router **rejeita o match** e faz fallback para o classificador LLM:
+
+```python
+# gateway/semantic_router.py — score gap filter
+MIN_SCORE_GAP = 0.05
+top1, top2 = top_k[0], top_k[1]
+if top1.score - top2.score < MIN_SCORE_GAP:
+    return None  # "não sei" — deixa o LLM decidir
+```
+
+### Pipeline completo de classificação
+
+```
+Usuário: "Preciso de férias para o João"
+    │
+    ▼
+┌─────────────────────────────┐
+│ 1. Semantic Router (Qdrant) │── match >0.92 + consenso ──▶ "RH" (sem LLM)
+│    Fallback:                 │
+│ 2. LLM Classifier           │── router.py classify_intent()
+│    Fallback:                 │
+│ 3. Lexical (keyword match)  │── último recurso
+└─────────────────────────────┘
+```
+
+> **Métrica real (AI-Orchestrator):** O semantic router responde ~60% das perguntas sem chamar o LLM, reduzindo latência do classify de ~300ms para ~15ms.
 
 ## Resumo
 

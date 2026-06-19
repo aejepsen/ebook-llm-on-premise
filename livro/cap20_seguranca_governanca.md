@@ -605,6 +605,39 @@ Nenhuma camada sozinha resolve. Juntas, tornam a injection possível mas inefica
 
 ---
 
+## Padrões de integração: o vocabulário da segurança
+
+O catálogo Agents Integration Patterns define 26 padrões para sistemas multi-agente. O AI-Orchestrator implementa 6 deles diretamente:
+
+| Defesa AI-Orchestrator | Padrão | O que faz |
+|------------------------|--------|-----------|
+| `sanitize.py` strip ChatML + 14 regex + BERTimbau | **Prompt Firewall** + **Trust Boundary** | Valida e sanitiza input antes de chegar ao modelo |
+| `ToolRegistry` com escopo por domínio | **Least-Privilege Tool Scope** | Cada agente só vê as ferramentas do seu domínio |
+| `CircuitBreaker` (3 falhas → OPEN 30s) | **Circuit Breaker** | Isola domínios com falha sem afetar os demais |
+| `X-Internal-Key` HMAC entre gateway e serviços | **Trust Boundary** | Autenticação entre camadas com `hmac.compare_digest` |
+| `RateLimiter` sliding window | **Rate Limiter** (extensão do Trust Boundary) | Proteção contra abuso (max_entries=10000) |
+| `Train_on_responses_only` + LoRA fine-tune | **Idempotent Agent** (princípio relacionado) | Treino determinístico — mesma entrada produz mesma estrutura de tool call |
+
+### Least-Privilege Tool Scope em ação
+
+```python
+# gateway/tools/registry.py — escopo por domínio
+class ToolRegistry:
+    def get_tools(self, dominio: str) -> list[dict]:
+        """Retorna APENAS as ferramentas do domínio solicitado."""
+        return [
+            {"type": "function", "function": {...}}
+            for f in self._ferramentas.get(dominio, [])
+        ]
+
+# Exemplo: agente de RH NUNCA recebe ferramentas de finanças
+tools_rh = registry.get_tools("rh")
+# tools_rh = [consultar_funcionario, solicitar_férias, ...]
+# NÃO inclui: consultar_saldo, aprovar_pagamento (essas são de finanças)
+```
+
+> **Princípio:** O modelo pode alucinar um tool call para `consultar_saldo` durante uma conversa de RH. Mas como essa ferramenta não está no escopo do agente de RH, o ToolRegistry retorna "ferramenta não encontrada" como feedback — e o modelo se autocorrige.
+
 ## Resumo
 
 | Ameaça | Defesa | Camada |
