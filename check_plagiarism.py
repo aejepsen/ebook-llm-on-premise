@@ -16,7 +16,7 @@ from datetime import datetime
 # Config
 # ---------------------------------------------------------------------------
 BOOK_DIR = Path("/home/aejepsen/Documentos/projeto-portifolio/ebook-llm-on-premise/livro")
-PDF_DIR = Path("/home/aejepsen/Documentos/ebook")
+PDF_DIR = Path("/home/aejepsen/Documentos/projeto-portifolio/ebook-llm-on-premise/ebook")  # Inclui o novo livro AAP
 NB_DIRS = [
     Path("/home/aejepsen/Documentos/git-repo/RAG-with-Python-Cookbook"),
     Path("/home/aejepsen/Documentos/git-repo/llm-model-inference"),

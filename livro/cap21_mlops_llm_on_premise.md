@@ -795,6 +795,51 @@ O catálogo Agents Integration Patterns mapeou 14 modos de falha empiricamente o
 
 ---
 
+## O Self-Improvement Flywheel: como agentes aprendem em produção
+
+Arsanjani & Bustos (2026) propõem um modelo de melhoria contínua para agentes em produção chamado **Self-Improvement Flywheel** — um ciclo que transforma cada interação em oportunidade de aprendizado:
+
+```
+     ┌──────────────────────────────────────────┐
+     │                                          │
+     ▼                                          │
+┌─────────┐   ┌──────────┐   ┌───────────┐    │
+│ Observe │ → │ Evaluate │ → │ Refine    │    │
+│ (traces)│   │ (metrics)│   │ (prompt/  │    │
+│         │   │          │   │  model)   │────┘
+└─────────┘   └──────────┘   └───────────┘
+```
+
+O ciclo opera em 5 estágios — o modelo **R⁵**: **Record** (registrar traces e métricas) → **Review** (avaliar performance contra gates) → **Refine** (ajustar prompts, ferramentas, ou re-treinar) → **Retest** (validar contra eval gates) → **Release** (deploy com canary).
+
+### Como o AI-Orchestrator implementa o R⁵
+
+| Estágio R⁵ | Ferramenta no AI-Orchestrator | Evidência |
+|------------|-------------------------------|-----------|
+| **Record** | Langfuse traces + spans + generations | `gateway/tracing.py` — trace por request |
+| **Review** | Eval gates + Langfuse dashboard | `evals/eval_routing.py`, `eval_domains.py`, `eval_injection.py` |
+| **Refine** | Ajuste de system prompt + re-treino LoRA | `train/colab_train_lora.ipynb` — iteração pós-eval |
+| **Retest** | Mesmos eval gates, golden set expandido | Golden set evoluiu de 44→64 exemplos |
+| **Release** | Deploy do modelo LoRA + modelo injection | `docker-compose.yml` — volume mount `./models:/app/models` |
+
+> "O Self-Improvement Flywheel transforma agentes de estáticos para adaptativos. Em vez de depender de intervenção manual para cada edge case, o sistema aprende com seus próprios erros — registrando, avaliando, refinando e re-lançando continuamente" (Arsanjani & Bustos, 2026, p. 368).
+
+### Canary Agent Testing: deploy seguro de novos modelos
+
+Quando você faz deploy de um novo modelo LoRA ou atualiza um system prompt, como garantir que não vai quebrar a produção? O padrão **Canary Agent Testing** resolve isso:
+
+> "Em vez de substituir o agente em produção, uma nova versão é deployada em paralelo como 'canário'. Uma fração do tráfego (ex: 5%) é roteada para o canário. Métricas de latência, acurácia e taxa de erro são comparadas com o agente estável. Se o canário performar pior, o tráfego é revertido automaticamente" (Arsanjani & Bustos, 2026, p. 275).
+
+No AI-Orchestrator, o equivalente é o **eval offline antes do deploy**: antes de promover `qwen3.5-9b-orch` (LoRA) a produção, os 3 eval gates foram executados contra o modelo baseline e contra o LoRA. O gate de injection (0 leaks) e domains (≥80%) precisaram passar antes do deploy.
+
+### Trust Decay and Scoring: confiança dinâmica em agentes
+
+Agentes não são infalíveis — um agente que performa bem hoje pode degradar amanhã (novo tipo de pergunta, mudança nos dados, drift do modelo). O padrão **Trust Decay and Scoring** atribui um score de confiança a cada agente, que decai com o tempo ou com falhas:
+
+> "Cada agente recebe um trust score dinâmico baseado em seu histórico recente de performance. O score decai naturalmente com o tempo (trust decay), forçando revalidação periódica. Falhas reduzem o score mais rapidamente; sucessos o restauram gradualmente" (Arsanjani & Bustos, 2026, p. 271).
+
+No AI-Orchestrator, o **Circuit Breaker** implementa uma forma simplificada de trust decay: 3 falhas consecutivas → circuito ABERTO (confiança zero) → 30s cooldown → HALF_OPEN (probe) → sucesso restaura CLOSED (confiança restaurada). Os eval gates periódicos (`eval_routing.py` executado contra o golden set atualizado) funcionam como revalidação de trust score.
+
 ## Resumo
 
 MLOps para LLMs on-premise não é um luxo — é o que separa uma demo de um produto. As 7 etapas formam um ciclo onde cada uma reforça as outras:
@@ -865,3 +910,10 @@ Isso elimina a necessidade de port forwarding, DDNS, ou certificados SSL manuais
 > **Exercício final:** Documente seu próprio setup MLOps. Desenhe o diagrama de deploy (serviços, portas, dependências). Liste os pontos únicos de falha. Proponha 3 melhorias para produção.
 
 O gap para produção é claro e quantificável: CI/CD automatizado, model registry e IaC. São 6 ações concretas. Nenhuma exige reescrever o sistema — apenas automatizar o que já é feito manualmente.
+
+---
+
+## Referências
+
+- Projeto AI-Orchestrator — `gateway/tracing.py` (Langfuse observability), `gateway/metrics.py` (MetricsCollector com cache 30s), `gateway/eval_results.py` (EvalResultsCollector), `gateway/security.py` (AccessTokenGuard + RateLimiter + client_ip), `gateway/tools/circuit.py` (CircuitBreaker).
+- Arsanjani, A. & Bustos, J.P. (2026). *Agentic Architectural Patterns for Building Multi-Agent Systems: Proven design patterns and practices for GenAI, agents, RAG*. Packt Publishing. Caps. 7 (Robustness: Canary Agent Testing, Trust Decay and Scoring, Rate-Limited Invocation, Fallback Model Invocation), 11 (Advanced Adaptation: Self-Improvement Flywheel, R⁵ Model, Cost Management and Tokenomics, Measuring Business Value/ROI).

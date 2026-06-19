@@ -29,6 +29,12 @@
 9. **AI-Orchestrator** — Anderson Ejepsen. Gateway multi-agente on-premise com LangGraph, Ollama, Qdrant e 4 microsserviços FastAPI. Fine-tuning LoRA do Qwen3.5-9B para roteamento. Produção em suasalada.com.br.
    - Fonte: https://github.com/aejepsen/AI-Orchestrator
 
+10. **Agent-Driven Design (ADD)** — Framework conceitual para design de agentes baseados em LLM: separação Model vs Harness, 4 topologias de agente, eval pyramid. Disponível em: https://github.com/Architecting-AI-Agents-In-Production/agent-driven-design
+
+11. **Agentic Architectural Patterns for Building Multi-Agent Systems** — Ali Arsanjani, Juan Pablo Bustos. Packt Publishing, 2026. Catálogo de padrões arquiteturais para sistemas multi-agente: coordenação (Agent Router, Supervisor, Consensus, Negotiation, Conflict Resolution), robustez (Circuit Breaker, Canary Testing, Trust Decay), compliance (Instruction Fidelity Auditing, Persistent Instruction Anchoring), e maturidade (GenAI Maturity Model, Self-Improvement Flywheel, R⁵ Model).
+   - Fonte: Packt Publishing, ISBN 978-1-80602-957-0
+   - Licença: Todos os direitos reservados. Citações e referências conforme fair use acadêmico.
+
 ## Ferramentas e Frameworks Citados
 
 | Ferramenta | Uso no livro | Site |

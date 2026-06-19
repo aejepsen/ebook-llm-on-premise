@@ -635,6 +635,72 @@ tools_rh = registry.tools_for("rh")
 
 > **Princípio:** O modelo pode alucinar um tool call para `consultar_saldo` durante uma conversa de RH. Mas como essa ferramenta não está no escopo do agente de RH, o ToolRegistry retorna "ferramenta não encontrada" como feedback — e o modelo se autocorrige.
 
+### Arquitetura em camadas de segurança: os 4 tiers
+
+Arsanjani & Bustos (2026) propõem uma arquitetura de segurança em 4 camadas para sistemas agentic, onde o AI-Orchestrator se encaixa naturalmente:
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 4. Security & Safety Tier                            │
+│    Agent Mesh Defense (Firewall) + Execution Envelope│
+├──────────────────────────────────────────────────────┤
+│ 3. Governance & Observability Tier                   │
+│    Causal Dependency Graph + Checkpointing +         │
+│    Rate-Limited Invocation + Real-Time Compliance    │
+├──────────────────────────────────────────────────────┤
+│ 2. Orchestration Tier                                │
+│    Watchdog Timeout + Adaptive Retry + Auto-Healing  │
+│    + Delayed Escalation + Trust Decay Routing        │
+├──────────────────────────────────────────────────────┤
+│ 1. Execution Tier                                    │
+│    Parallel Execution Consensus + Majority Voting    │
+│    + Agent Autonomy (Sense → Reason → Plan → Act)    │
+└──────────────────────────────────────────────────────┘
+```
+
+**Tier 1 — Execution:** Agentes de domínio (finanças, RH, estoque, vendas) executam a lógica de negócio com ferramentas escopadas.
+
+**Tier 2 — Orchestration:** O grafo LangGraph coordena o fluxo: `sanitize → classify → confirm_dispatch → dispatch → synthesize`, com circuit breaker e retry.
+
+**Tier 3 — Governance & Observability:** Langfuse captura traces completos (Causal Dependency Graph), o checkpointer SQLite habilita state recovery, o RateLimiter protege a API, e os eval gates (`eval_routing.py`, `eval_injection.py`) monitoram compliance em tempo real.
+
+**Tier 4 — Security & Safety:** O Prompt Firewall + BERTimbau sanitizam inputs, o Least-Privilege Tool Scope isola domínios, e o Circuit Breaker isola falhas.
+
+### Instruction Fidelity: o agente seguiu as instruções?
+
+Um risco sutil em sistemas agentic é o **desvio de instrução**: o modelo recebe um system prompt com regras, mas ao longo de múltiplos turnos ou tool calls, gradualmente as ignora. Arsanjani & Bustos (2026) definem o padrão **Instruction Fidelity Auditing** para mitigar isso:
+
+> "O padrão verifica, passo a passo, se as ações e outputs do agente estão em conformidade com as instruções originais. Em vez de confiar que o modelo 'lembra' das regras, um auditor externo (outro LLM ou verificador determinístico) compara cada ação com o conjunto de instruções" (Arsanjani & Bustos, 2026, p. 185).
+
+No AI-Orchestrator, essa auditoria é implementada em dois níveis:
+
+1. **Sanitize (entrada):** strip de tokens ChatML + 14 regex + BERTimbau verificam se o prompt do usuário tenta subverter instruções
+2. **Router (saída):** o `RoutePlan` valida que o domínio classificado existe e que as ferramentas retornadas pertencem ao escopo correto
+
+### Persistent Instruction Anchoring
+
+Complementar ao Instruction Fidelity, o padrão **Persistent Instruction Anchoring** garante que restrições críticas sobrevivam a múltiplos turnos de conversa. Em vez de injetar regras apenas no system prompt inicial (que pode ser "esquecido" após muitos tokens), as instruções são **re-ancoradas** a cada iteração do loop do agente:
+
+```python
+# Padrão simplificado de Persistent Instruction Anchoring
+ANCHOR_RULES = [
+    "NUNCA invente dados. Se não souber, diga 'não tenho essa informação'.",
+    "Sempre cite a fonte dos dados (ex: 'Conforme o sistema de RH...').",
+    "Write operations exigem confirmação humana (HITL).",
+]
+
+def build_agent_prompt(domain: str, user_question: str, rules: list[str]) -> str:
+    """Re-ancora regras críticas a cada tool call."""
+    anchored = "\n".join(f"- {r}" for r in rules)
+    return f"""Você é o agente de {domain}.
+Regras INABALÁVEIS (válidas para TODA a conversa):
+{anchored}
+
+Pergunta do usuário: {user_question}"""
+```
+
+> "O padrão mantém constraints através de múltiplos turnos, ancorando-as no prompt do agente a cada iteração. Isso evita o 'instruction drift' — o fenômeno onde agentes gradualmente se desviam de suas regras originais em conversas longas" (Arsanjani & Bustos, 2026, p. 193).
+
 ## Resumo
 
 | Ameaça | Defesa | Camada |
@@ -653,7 +719,8 @@ tools_rh = registry.tools_for("rh")
 
 - OWASP. *Top 10 for LLM Applications*. https://owasp.org/www-project-top-10-for-large-language-model-applications/
 - Greshake, K. et al. (2023). *Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection*. AISec.
-- Projeto AI-Orchestrator — `gateway/sanitize.py` (14 padrões de injection detection + sanitização estrutural), `gateway/security.py` (AccessTokenGuard fail-closed + RateLimiter por IP).
+- Projeto AI-Orchestrator — `gateway/sanitize.py` (14 padrões de injection detection + sanitização estrutural), `gateway/security.py` (AccessTokenGuard fail-closed + RateLimiter por IP), `gateway/injection_classifier.py` (BERTimbau fine-tunado).
+- Arsanjani, A. & Bustos, J.P. (2026). *Agentic Architectural Patterns for Building Multi-Agent Systems: Proven design patterns and practices for GenAI, agents, RAG*. Packt Publishing. Caps. 6 (Explainability & Compliance: Instruction Fidelity Auditing, Persistent Instruction Anchoring), 7 (Robustness: Agent Self-Defense, Agent Mesh Defense, Execution Envelope Isolation), 10 (System-Level: Agent Authentication, Real-Time Compliance Monitoring).
 - SKILL_MULTIAGENT.md — Fase 4 (segurança e resiliência), Fase 6 (5 findings críticos de segurança).
 - Brasil. *Lei Geral de Proteção de Dados (LGPD)* — Lei 13.709/2018.
 - *Hands-on LLM-based Agents* (PDF) — Segurança e governança de sistemas agênticos.

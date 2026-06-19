@@ -112,6 +112,24 @@ def sanitize(estado: EstadoGrafo) -> EstadoGrafo:
     }
 ```
 
+## O GenAI Maturity Model: do prompt simples ao multi-agente
+
+Antes de mergulhar na implementação, é útil situar o AI-Orchestrator dentro de um modelo de maturidade mais amplo. Arsanjani & Bustos (2026) propõem um modelo de 7 níveis para a jornada de adoção de GenAI em empresas:
+
+| Nível | Nome | O que faz | Exemplo |
+|-------|------|-----------|---------|
+| **0** | Fundação de dados | Adquirir, limpar, curar e governar dados para consumo de IA | Pipeline ETL para documentos corporativos |
+| **1** | Seleção de modelo e prompting | Selecionar modelos pré-treinados, engenharia de prompts, servir via API | `ollama run qwen2.5:7b`, primeiros prompts |
+| **2** | Enriquecimento contextual (RAG) | Buscar contexto externo dinamicamente para aumentar a precisão | Chatbot que consulta base de conhecimento antes de responder |
+| **3** | Tuning para especificidade (LoRA/FFT) | Fine-tuning com dados proprietários (PEFT: LoRA, adapters) | Treinar LoRA em dados de vendas para um agente de domínio |
+| **4** | Grounding e avaliação | Vincular respostas a fontes verificáveis, métricas contínuas de qualidade | Agente financeiro com citações e eval gates |
+| **5** | Sistemas single-agent | Agente autônomo com raciocínio multi-step, ferramentas, planejamento | Assistente de viagens que reserva voos e hotéis |
+| **6** | Sistemas multi-agent | Múltiplos agentes especializados colaborando, negociando, compartilhando conhecimento | AI-Orchestrator: 4 agentes com circuit breaker, semantic router, Langfuse |
+
+O AI-Orchestrator opera nos **níveis 5-6**, tendo percorrido os níveis 0-4 durante seu desenvolvimento. A jornada foi: dados (nível 0) → modelos e prompts (nível 1, cap 4-5) → RAG (nível 2, caps 14-17) → LoRA fine-tune (nível 3, cap 11) → eval gates (nível 4, cap 12) → single-agent (nível 5) → multi-agent (nível 6, este capítulo).
+
+> **Princípio:** "O modelo de maturidade ilustra que alcançar sistemas multi-agente sofisticados (Níveis 5-6) depende de construir fundações sólidas nos níveis anteriores" (Arsanjani & Bustos, 2026, p. 16). Pular etapas — tentar multi-agente sem RAG ou sem fine-tuning — é a causa mais comum de falhas em produção.
+
 ## O framework ADD: Model vs Harness
 
 Antes de mergulhar na implementação, é essencial entender uma distinção conceitual que estrutura todo o AI-Orchestrator: a separação entre **Model** e **Harness**, vinda do framework Agent-Driven Design (ADD).
@@ -649,6 +667,29 @@ class CircuitBreaker:
 
 Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independente, gerenciado por chave. Se o RH cair, vendas continua funcionando normalmente.
 
+### Conflict Resolution: o que fazer quando agentes discordam
+
+Em sistemas multi-agente, conflitos são inevitáveis. Dois agentes podem gerar recomendações opostas para a mesma ação, ou competir pelo mesmo recurso. Arsanjani & Bustos (2026) catalogam 4 abordagens de resolução de conflitos, das quais o AI-Orchestrator implementa duas:
+
+| Abordagem | Como funciona | Quando usar | Usado no AI-Orchestrator? |
+|-----------|---------------|-------------|---------------------------|
+| **Hierárquica** | Um supervisor/orquestrador tem autoridade para impor a decisão | Compliance, segurança, decisões auditáveis | ✓ O `synthesize` atua como árbitro final |
+| **Baseada em políticas** | Regras pré-definidas resolvem conflitos automaticamente | Determinismo, auditoria | ✓ `confirm_dispatch` requer aprovação humana para write ops |
+| **Negociação** | Agentes negociam entre si para encontrar compromisso | Cenários com espaço para "win-win" | ✗ Overkill para 4 domínios isolados |
+| **Teoria dos jogos** | Modelagem formal com equilíbrio de Nash | Cenários complexos multi-objetivo | ✗ Custo computacional não justifica |
+
+**Resolução hierárquica** é o padrão em aplicações enterprise: "Um agente supervisor designado tem autoridade para anular agentes conflitantes e impor uma decisão. É a abordagem mais direta, oferecendo resultados claros e previsíveis" (Arsanjani & Bustos, 2026, p. 170). No AI-Orchestrator, o nó `synthesize` do grafo LangGraph exerce esse papel — recebe as respostas de todos os agentes e produz uma resposta consolidada.
+
+**Resolução baseada em políticas** externaliza a lógica de decisão: "Uma política pode estabelecer que 'agentes de segurança sempre têm prioridade sobre agentes de otimização'. A resolução é determinística e consistente — mais fácil para humanos entenderem, modificarem e auditarem" (Arsanjani & Bustos, 2026, p. 170-171).
+
+### Knowledge Sharing: memória compartilhada entre agentes
+
+"Se agentes operam em silos de informação, o sistema como um todo não pode se beneficiar dos insights únicos que agentes individuais adquirem ao longo do tempo" (Arsanjani & Bustos, 2026, p. 149). O padrão **Shared Epistemic Memory** resolve isso com um repositório global onde agentes publicam descobertas e consultam o conhecimento coletivo.
+
+No AI-Orchestrator, esta memória compartilhada é implementada pelo **checkpointer SQLite do LangGraph**: o estado do grafo (`GraphState`) persiste entre turnos, permitindo que o agente de finanças acesse resultados de uma consulta anterior feita pelo agente de RH, se relevante ao contexto da conversa.
+
+> **Princípio:** "A qualidade da execução de cada agente depende criticamente do conhecimento que ele possui. Sem compartilhamento, conhecimento valioso descoberto por um agente permanece isolado" (Arsanjani & Bustos, 2026, p. 149).
+
 ## Resumo
 
 | Componente | Decisão |
@@ -668,6 +709,7 @@ Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independ
 
 - LangGraph Documentation. *StateGraph, Checkpointing, Interrupt*. https://langchain-ai.github.io/langgraph/
 - Projeto AI-Orchestrator — `gateway/graph.py` (grafo completo: sanitize → classify → [clarification | confirm_dispatch → dispatch] → synthesize), `gateway/agents.py` (loop ReAct com tool calling), `gateway/tools/circuit.py` (circuit breaker por domínio).
+- Arsanjani, A. & Bustos, J.P. (2026). *Agentic Architectural Patterns for Building Multi-Agent Systems: Proven design patterns and practices for GenAI, agents, RAG*. Packt Publishing. Caps. 1 (GenAI Maturity Model), 4 (Agent Anatomy), 5 (Multi-Agent Coordination: Agent Router, Consensus, Knowledge Sharing, Conflict Resolution).
 - *Hands-on LLM-based Agents* (PDF) — Arquiteturas multi-agente e design patterns.
 - Wu, Q. et al. (2023). *AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation*. Microsoft Research.
 - SKILL_MULTIAGENT.md — Fases 0–7 de construção multi-agente, anti-padrões, gotchas.
