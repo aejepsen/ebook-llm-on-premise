@@ -480,7 +480,7 @@ O problema: atacantes usam paráfrases, idiomas diferentes, codificação Base64
 O detector em produção usa `neuralmind/bert-base-portuguese-cased` fine-tunado com `BertForSequenceClassification(num_labels=2)`. O design prioriza resiliência: se o modelo falhar ao carregar, o pipeline não quebra — o fallback regex assume.
 
 ```python
-# gateway/injection_detector.py — Detector de prompt injection
+# gateway/injection_classifier.py — Detector de prompt injection
 
 from pathlib import Path
 
@@ -863,25 +863,14 @@ O BERT não serve só para classificação de texto — ele é a primeira linha 
 #    Acurácia: 100% na validação (63 amostras)
 #    Modelo salvo: 417 MB em models/
 #
-# 3. Integração no gateway (gateway/injection_detector.py):
-#    - Modelo carregado uma vez na inicialização
+# 3. Integração no gateway (gateway/injection_classifier.py):
+#    - Modelo carregado uma vez na inicialização (lazy)
 #    - Inferência CPU (~5ms por request)
-#    - Threshold configurável: INJECTION_THRESHOLD=0.7
+#    - Threshold configurável: 0.7
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-
-class InjectionDetector:
-    def __init__(self, model_path: str = "models/bertimbau-injection"):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
-
-    def predict(self, texto: str) -> tuple[bool, float]:
-        inputs = self.tokenizer(texto, return_tensors="pt", truncation=True, max_length=256)
-        with torch.no_grad():
-            logits = self.model(**inputs).logits
-            score = torch.softmax(logits, dim=1)[0][1].item()
-        return score > 0.7, score  # True = injection detectado
+# O detector expõe dois métodos públicos:
+#   score(text) → float   (probabilidade de injection, -1.0 se indisponível)
+#   is_injection(text) → bool  (True se score >= threshold)
 ```
 
 ### A defesa em 3 camadas

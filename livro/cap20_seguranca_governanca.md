@@ -623,15 +623,12 @@ O catálogo Agents Integration Patterns define 26 padrões para sistemas multi-a
 ```python
 # gateway/tools/registry.py — escopo por domínio
 class ToolRegistry:
-    def get_tools(self, dominio: str) -> list[dict]:
-        """Retorna APENAS as ferramentas do domínio solicitado."""
-        return [
-            {"type": "function", "function": {...}}
-            for f in self._ferramentas.get(dominio, [])
-        ]
+    def tools_for(self, domain: str) -> list[dict]:
+        """Tools no formato Ollama, escopadas ao serviço do domínio."""
+        return [spec.as_ollama_tool() for spec in self._specs(domain).values()]
 
 # Exemplo: agente de RH NUNCA recebe ferramentas de finanças
-tools_rh = registry.get_tools("rh")
+tools_rh = registry.tools_for("rh")
 # tools_rh = [consultar_funcionario, solicitar_férias, ...]
 # NÃO inclui: consultar_saldo, aprovar_pagamento (essas são de finanças)
 ```

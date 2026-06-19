@@ -482,7 +482,7 @@ class Embedder(Protocol):
     """Interface para geradores de embedding."""
     def embed(self, textos: list[str]) -> list[list[float]]: ...
     @property
-    def dimension(self) -> int: ...
+    def dim(self) -> int: ...
 
 class SBERTEmbedder:
     """Embedder primário — SBERT CPU, sem dependência do Ollama."""
@@ -493,13 +493,13 @@ class SBERTEmbedder:
         )
     def embed(self, textos): ...
     @property
-    def dimension(self): return 384
+    def dim(self): return 384
 
 class OllamaEmbedder:
     """Fallback — Ollama com nomic-embed-text."""
     def embed(self, textos): ...
     @property
-    def dimension(self): return 768
+    def dim(self): return 768
 ```
 
 > **Regra prática:** Comece com `nomic-embed-text` (simples, didático). Em produção, migre para SBERT (mais rápido, sem depender do Ollama estar rodando para embeddings).

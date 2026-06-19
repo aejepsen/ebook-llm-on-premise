@@ -627,17 +627,18 @@ Em vez de indexar documentos genéricos, o semantic router indexa um **conjunto 
 
 ### 2. Consenso Top-K
 
-Não basta o vizinho mais próximo (top-1) indicar um domínio. O semantic router verifica se os **K vizinhos mais próximos concordam**:
+Não basta o vizinho mais próximo (top-1) indicar um domínio. O semantic router exige **unanimidade**: todos os vizinhos acima do threshold de confiança (`threshold=0.80`) precisam concordar nos domínios. Vizinhos com domínios heterogêneos indicam zona de fronteira entre rotas:
 
 ```python
 # gateway/semantic_router.py — lógica de consenso
-top_k = client.search(collection, query_vector, limit=5)
-dominios = [hit.payload["dominio"] for hit in top_k]
-# Consenso: maioria dos K vizinhos concorda?
-from collections import Counter
-mais_comum = Counter(dominios).most_common(1)[0]
-if mais_comum[1] >= 3:  # pelo menos 3 dos 5 concordam
-    return mais_comum[0]  # domínio determinado
+confident = [h for h in hits if h["score"] >= 0.80]
+if not confident or confident[0] is not hits[0]:
+    return None  # top-1 abaixo do threshold → LLM decide
+
+top_domains = set(confident[0]["payload"]["domains"])
+# Unanimidade: TODOS os vizinhos confiantes concordam
+if any(set(h["payload"]["domains"]) != top_domains for h in confident):
+    return None  # divergência nos domínios → LLM decide
 ```
 
 ### 3. Score gap filter

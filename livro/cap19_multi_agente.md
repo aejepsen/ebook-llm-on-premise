@@ -133,7 +133,7 @@ O AI-Orchestrator implementa esta separação rigorosamente:
 
 O ADD cataloga 4 topologias. O AI-Orchestrator usa duas:
 
-1. **Pipeline:** sanitize → classify → dispatch → synthesize (sequencial, cada etapa tem contrato explícito)
+1. **Pipeline:** sanitize → classify → confirm_dispatch → dispatch → synthesize (com nós extras: respond_clarification para perguntas ambíguas, HITL para write ops)
 2. **Specialist Pool:** router classifica o domínio → dispatcher ativa o agente especialista (finanças OU rh OU estoque OU vendas)
 
 **Topologias NÃO usadas** (e por quê):
@@ -594,48 +594,60 @@ Em produção, microsserviços falham. Se o serviço de RH estiver offline e o g
 ```python
 # gateway/tools/circuit.py — Circuit Breaker por domínio
 import time
-from enum import Enum
+import threading
 
-class State(Enum):
-    CLOSED = "closed"       # operação normal
-    OPEN = "open"           # bloqueado — falhas recentes
-    HALF_OPEN = "half_open" # testando recuperação
+CLOSED = "closed"
+OPEN = "open"
+HALF_OPEN = "half_open"
 
 class CircuitBreaker:
-    def __init__(self, failure_threshold: int = 3, cooldown: float = 30.0):
-        self._threshold = failure_threshold
-        self._cooldown = cooldown
-        self._state = State.CLOSED
-        self._failures = 0
-        self._last_failure = 0.0
+    """Estado por domínio: CLOSED → (N falhas consecutivas) → OPEN → (cooldown) → HALF_OPEN."""
 
-    def call(self, func, *args, **kwargs):
-        if self._state == State.OPEN:
-            if time.monotonic() - self._last_failure > self._cooldown:
-                self._state = State.HALF_OPEN  # testa recuperação
-            else:
-                raise CircuitOpenError("Circuito aberto — domínio indisponível")
+    def __init__(self, *, threshold: int = 3, cooldown_s: float = 30.0):
+        self._threshold = threshold
+        self._cooldown_s = cooldown_s
+        self._domains: dict[str, dict] = {}
+        self._lock = threading.Lock()
 
-        try:
-            result = func(*args, **kwargs)
-            if self._state == State.HALF_OPEN:
-                self._state = State.CLOSED  # recuperado!
-            self._failures = 0
-            return result
-        except Exception as e:
-            self._failures += 1
-            self._last_failure = time.monotonic()
-            if self._failures >= self._threshold:
-                self._state = State.OPEN
-            raise e
+    def allow(self, domain: str) -> bool:
+        """True se a chamada pode prosseguir; em OPEN expirado vira o probe half-open."""
+        entry = self._domains.get(domain)
+        if not entry or entry["state"] == CLOSED:
+            return True
+        if entry["state"] == OPEN:
+            if time.monotonic() - entry["opened_at"] >= self._cooldown_s:
+                entry["state"] = HALF_OPEN
+                return True
+            return False
+        return False  # HALF_OPEN: probe já em voo
+
+    def record_success(self, domain: str) -> None:
+        entry = self._domains.get(domain)
+        if entry:
+            entry["state"] = CLOSED
+            entry["failures"] = 0
+
+    def record_failure(self, domain: str) -> None:
+        entry = self._domains.get(domain)
+        if not entry:
+            return
+        if entry["state"] == HALF_OPEN:
+            entry["state"] = OPEN
+            entry["opened_at"] = time.monotonic()
+            return
+        entry["failures"] += 1
+        if entry["state"] == CLOSED and entry["failures"] >= self._threshold:
+            entry["state"] = OPEN
+            entry["opened_at"] = time.monotonic()
 ```
 
 **Regras do AI-Orchestrator:**
-- **3 falhas de transporte** (timeout, connection refused) → circuito ABERTO por 30s
+- **3 falhas de transporte** (timeout, connection refused, 5xx) → circuito ABERTO por 30s
 - **Erros 4xx NÃO contam** — são erros de negócio (produto não encontrado, saldo insuficiente), não de infraestrutura
-- **Half-open:** após 30s, o próximo request serve como teste — se passar, fecha o circuito
+- **Half-open:** após 30s, o próximo request serve como probe — se passar, fecha o circuito; se falhar, reabre
+- **Thread-safe:** lock por domínio (`threading.Lock`) — o dispatch usa `ThreadPoolExecutor`
 
-Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independente. Se o RH cair, vendas continua funcionando normalmente.
+Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independente, gerenciado por chave. Se o RH cair, vendas continua funcionando normalmente.
 
 ## Resumo
 
@@ -655,7 +667,7 @@ Cada domínio (finanças, RH, estoque, vendas) tem seu próprio breaker independ
 ## Referências
 
 - LangGraph Documentation. *StateGraph, Checkpointing, Interrupt*. https://langchain-ai.github.io/langgraph/
-- Projeto AI-Orchestrator — `gateway/graph.py` (grafo completo: sanitize → classify → dispatch → synthesize), `gateway/agents.py` (loop ReAct com tool calling), `gateway/semantic_router.py` (classificação em cascata).
+- Projeto AI-Orchestrator — `gateway/graph.py` (grafo completo: sanitize → classify → [clarification | confirm_dispatch → dispatch] → synthesize), `gateway/agents.py` (loop ReAct com tool calling), `gateway/tools/circuit.py` (circuit breaker por domínio).
 - *Hands-on LLM-based Agents* (PDF) — Arquiteturas multi-agente e design patterns.
 - Wu, Q. et al. (2023). *AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation*. Microsoft Research.
 - SKILL_MULTIAGENT.md — Fases 0–7 de construção multi-agente, anti-padrões, gotchas.

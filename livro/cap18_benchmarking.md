@@ -574,10 +574,10 @@ class TraceHandle:
 
     def span(self, *, name: str, input: dict | None = None):
         try:
-            return SpanHandle(self._trace.span(name=name, input=input))
+            return TraceHandle(self._trace.span(name=name, input=input))
         except Exception:
             logger.debug("langfuse span noop: %s", name)
-            return SpanHandle(None)
+            return TraceHandle(None)
 
     def generation(self, *, name: str, model: str, input: list):
         try:
@@ -598,20 +598,6 @@ class TraceHandle:
             self._trace.update(status="completed")
         except Exception:
             pass
-
-
-class SpanHandle:
-    """Wrapper seguro sobre span."""
-
-    def __init__(self, span):
-        self._span = span
-
-    def end(self, *, output: dict | None = None):
-        if self._span:
-            try:
-                self._span.end(output=output)
-            except Exception:
-                pass
 
 
 class GenerationHandle:

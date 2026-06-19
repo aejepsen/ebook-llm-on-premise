@@ -810,39 +810,44 @@ O AI-Orchestrator demonstra que é possível implementar MLOps real — containe
 
 ### Notas de produção
 
-**SSE Heartbeat:** Para manter a conexão Server-Sent Events viva durante delays de LLM (>15s), o gateway envia heartbeats periódicos:
+**SSE Heartbeat:** Para manter a conexão Server-Sent Events viva durante delays de LLM (>15s), o gateway em `main.py` envia keepalives periódicos via `asyncio.Queue`:
 
 ```python
-# gateway/server.py — heartbeat via SSE comment
-async def liveness_heartbeat(interval: float = 5.0):
-    while True:
-        await asyncio.sleep(interval)
-        yield {"event": "heartbeat", "data": ""}
+# gateway/main.py — keepalive SSE via asyncio.Queue
+try:
+    event, data = await asyncio.wait_for(
+        queue.get(), timeout=15.0
+    )
+except asyncio.TimeoutError:
+    yield ": keepalive\n\n"  # Cloudflare 524 timeout prevention
+    continue
 ```
 
-Sem heartbeat, proxies como Nginx e Cloudflare fecham conexões inativas após 60-120s, quebrando a experiência de streaming.
+Sem keepalive, proxies como Nginx e Cloudflare fecham conexões inativas após 60-120s, quebrando a experiência de streaming.
 
-**Rate Limiter por IP:** O `gateway/security.py` implementa sliding window rate limiting com `max_entries=10000`:
+**Rate Limiter por IP:** O `gateway/security.py` implementa sliding window rate limiting com `max_entries=10000` e eviction automático:
 
 ```python
-# gateway/security.py — RateLimiter sliding window
-from collections import defaultdict
+# gateway/security.py — RateLimiter sliding window + eviction
+from collections import deque
 import time
 
 class RateLimiter:
-    def __init__(self, max_requests: int = 30, window: float = 60.0):
-        self._max = max_requests
-        self._window = window
-        self._clients: dict[str, list[float]] = defaultdict(list)
+    def __init__(self, max_requests: int = 10, window_s: float = 3600.0,
+                 max_entries: int = 10_000):
+        self.max_requests = max_requests
+        self.window_s = window_s
+        self._hits: dict[str, deque[float]] = {}
+        self._max_entries = max_entries
 
-    def check(self, client_ip: str) -> bool:
-        agora = time.monotonic()
-        self._clients[client_ip] = [
-            t for t in self._clients[client_ip] if agora - t < self._window
-        ]
-        if len(self._clients[client_ip]) >= self._max:
+    def allow(self, client_ip: str) -> bool:
+        now = time.monotonic()
+        hits = self._hits.setdefault(client_ip, deque())
+        while hits and now - hits[0] >= self.window_s:
+            hits.popleft()
+        if len(hits) >= self.max_requests:
             return False  # bloqueado
-        self._clients[client_ip].append(agora)
+        hits.append(now)
         return True
 ```
 
