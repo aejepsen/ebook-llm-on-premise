@@ -26,7 +26,7 @@
 
 ## Projetos Práticos Referenciados
 
-9. **AI-Orchestrator** — Anderson Ejepsen. Gateway multi-agente on-premise com LangGraph, Ollama, Qdrant e 4 microsserviços FastAPI. Fine-tuning LoRA do Qwen3.5-9B para roteamento. Produção em suasalada.com.br.
+9. **AI-Orchestrator** — Allan Eric Jepsen. Gateway multi-agente on-premise com LangGraph, Ollama, Qdrant e 4 microsserviços FastAPI. Fine-tuning LoRA do Qwen3.5-9B para roteamento. Produção em suasalada.com.br.
    - Fonte: https://github.com/aejepsen/AI-Orchestrator
 
 10. **Agent-Driven Design (ADD)** — Framework conceitual para design de agentes baseados em LLM: separação Model vs Harness, 4 topologias de agente, eval pyramid. Disponível em: https://github.com/Architecting-AI-Agents-In-Production/agent-driven-design
@@ -52,4 +52,4 @@
 
 ## Nota sobre Atribuição
 
-Os notebooks neste repositório são **adaptações comentadas em português** dos materiais originais listados acima. Todo conteúdo original mantém a atribuição aos respectivos autores. As adaptações, explicações adicionais e o texto do livro são de autoria de Anderson Ejepsen, licenciados sob CC BY-NC-SA 4.0.
+Os notebooks neste repositório são **adaptações comentadas em português** dos materiais originais listados acima. Todo conteúdo original mantém a atribuição aos respectivos autores. As adaptações, explicações adicionais e o texto do livro são de autoria de Allan Eric Jepsen, licenciados sob CC BY-NC-SA 4.0.

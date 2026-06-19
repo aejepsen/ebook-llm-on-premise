@@ -94,7 +94,7 @@ Notebooks adaptados mantêm atribuição aos autores originais conforme licença
 
 ## Autor
 
-Adaptado e comentado por **Anderson Ejepsen** — AI Engineer.
+Adaptado e comentado por **Allan Eric Jepsen** — AI Engineer.
 
 ---
 
