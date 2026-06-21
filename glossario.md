@@ -138,6 +138,12 @@
 
 **Semantic Router:** Roteador que classifica a intenção do usuário usando similaridade de embeddings, com fallback para LLM classifier.
 
+**Semiose (engenharia):** No AI-Orchestrator, conjunto de três técnicas de construção/preservação de significado num pipeline de IA — enriquecimento contextual da query (Camada A), grafo de conhecimento para relações cross-domínio (Camada B) e re-ranking contextual (Camada C). Termo emprestado da semiótica, mas tratado de forma operacional (cap. 22). Ver `PLANO_SEMIOSE.md`.
+
+**Contextual Retrieval:** Técnica que anexa contexto a um trecho antes de vetorizá-lo, reduzindo falhas de recuperação causadas pela perda de contexto no chunking (Anthropic, 2024). Inspira a Camada A da Semiose.
+
+**GraphRAG:** Abordagem de RAG que constrói um grafo de conhecimento de entidades e relações a partir do corpus, com comunidades e resumos, para responder a perguntas relacionais e globais (Edge et al., 2024). Inspira a Camada B da Semiose.
+
 **Speculative Decoding:** Técnica que usa um modelo menor (draft) para "chutar" múltiplos tokens, depois o modelo grande verifica em paralelo. Aceleração típica: 1.4-1.8×.
 
 **SwiGLU:** Função de ativação usada em FFN de modelos modernos (Llama, Qwen, Mistral). Substitui ReLU/GELU do Transformer original.

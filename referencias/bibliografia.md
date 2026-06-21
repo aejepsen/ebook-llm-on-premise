@@ -35,6 +35,19 @@
    - Fonte: Packt Publishing, ISBN 978-1-80602-957-0
    - Licença: Todos os direitos reservados. Citações e referências conforme fair use acadêmico.
 
+## Artigos e Fontes sobre Semântica e Recuperação (Cap. 22 — Semiose)
+
+12. **Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks** — Nils Reimers, Iryna Gurevych. EMNLP, 2019. arXiv:1908.10084. Redes siamesas para embeddings de sentença comparáveis por cosseno; custo de cross-encoder vs. bi-encoder em busca semântica. PDF: `ebook/sbert_reimers_gurevych_2019.pdf`.
+
+13. **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks** — Patrick Lewis et al. NeurIPS, 2020. arXiv:2005.11401. Combinação de memória paramétrica (seq2seq) e não-paramétrica (índice vetorial denso); redução de alucinação. PDF: `ebook/rag_lewis_2020.pdf`.
+
+14. **Retrieval-Augmented Generation for Large Language Models: A Survey** — Yunfan Gao et al., 2023. arXiv:2312.10997. Taxonomia Naive/Advanced/Modular RAG; otimizações de pré-recuperação (query rewriting/expansion) e pós-recuperação (rerank). PDF: `ebook/rag_survey_gao_2023.pdf`.
+
+15. **From Local to Global: A GraphRAG Approach to Query-Focused Summarization** — Darren Edge et al. (Microsoft Research), 2024. arXiv:2404.16130. Grafo de conhecimento de entidades, detecção de comunidades (Leiden) e resumos de comunidade para sensemaking global. PDF: `ebook/graphrag_edge_2024.pdf`.
+
+16. **Introducing Contextual Retrieval** — Anthropic, 19 set. 2024. Contextual Embeddings + Contextual BM25; perda de contexto no RAG ingênuo e ganhos de recuperação (49%/67% com reranking).
+   - Fonte: https://www.anthropic.com/news/contextual-retrieval
+
 ## Ferramentas e Frameworks Citados
 
 | Ferramenta | Uso no livro | Site |

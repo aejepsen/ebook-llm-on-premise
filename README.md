@@ -36,6 +36,7 @@ Livro prático de AI Engineering para iniciantes — do zero ao deploy de modelo
 19. [Arquitetura multi-agente on-premise](livro/cap19_multi_agente.md)
 20. [Segurança e governança de LLMs locais](livro/cap20_seguranca_governanca.md)
 21. [MLOps para LLMs On-Premise](livro/cap21_mlops_llm_on_premise.md)
+22. [Semiose aplicada: construção de significado em pipelines de IA](livro/cap22_semiose_aplicada.md)
 
 ### Referências
 - [Bibliografia e fontes](referencias/bibliografia.md)
@@ -64,8 +65,12 @@ Cada capítulo possui um notebook correspondente na pasta `notebooks/`, com expl
 | `cap16_rag_agentes.ipynb` | 16 | RAG agentic com LangGraph |
 | `cap17_graph_rag.ipynb` | 17 | Graph RAG com Neo4j |
 | `cap18_benchmarking.ipynb` | 18 | Benchmarking de serving |
+| `cap19_multi_agente.ipynb` | 19 | Multi-agente: classificação 3 camadas, fan-out/fan-in, Tool Registry, Circuit Breaker |
+| `cap20_seguranca_governanca.ipynb` | 20 | Segurança: injection, sanitização, rate limit, auth fail-closed, RBAC, PII |
+| `cap21_mlops_llm_on_premise.ipynb` | 21 | MLOps: config 12-Factor, gates de eval, observabilidade, serving por env |
+| `cap22_semiose.ipynb` | 22 | Semiose aplicada: Camadas A/B/C + S1/S3/S6 |
 
-> **Nota:** Os capítulos 19 (Multi-Agente), 20 (Segurança) e 21 (MLOps) documentam a arquitetura e código do AI-Orchestrator — não possuem notebooks dedicados, pois seu conteúdo prático está no código-fonte do projeto (`gateway/`, `services/`, `evals/`).
+> **Nota:** Os capítulos 19–22 (Multi-Agente, Segurança, MLOps e Semiose) são específicos do **AI-Orchestrator**. Seus notebooks **espelham o código real do projeto** (`gateway/`, `evals/`), mas rodam em CPU/Colab via *mocks* locais — não exigem a stack completa (Ollama/Qdrant/Neo4j/serviços HTTP) no ar. Os capítulos 2–18 permanecem como materiais didáticos adaptados de fontes externas (ver atribuição em cada notebook).
 
 ## Como usar
 
