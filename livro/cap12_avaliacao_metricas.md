@@ -263,7 +263,7 @@ O modelo LoRA é promovido para produção **apenas se**:
 2. Não regride em nenhuma métrica comparado ao modelo base
 3. Resultados são **consistentes** em pelo menos 2 runs (eliminando variância da geração)
 
-> **No AI-Orchestrator**: o modelo LoRA foi avaliado em 2 runs consecutivos com resultados idênticos (90.9%, 0/6, 87.5%). Passou nos 3 gates. Foi promovido para produção com `.env MODEL=qwen3.5-9b-orch`.
+> **No AI-Orchestrator**: o modelo LoRA passou nos 3 gates e foi promovido para produção com `.env MODEL=qwen3.5-9b-orch`. Após canonicalizar o golden (63 casos) e ativar a decomposição multi-domínio + enriquecimento via Knowledge Graph (cap. 22), o roteamento estabilizou em **93,7% (59/63)** — medição repetida em 4 runs consecutivos com resultado idêntico, eliminando a variância da geração.
 
 ### Watchdog de avaliação
 

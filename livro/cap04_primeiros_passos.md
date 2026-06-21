@@ -431,7 +431,9 @@ No próximo capítulo, vamos mergulhar na **quantização** -- a técnica que to
 > |------|--------|------|---------------|------------------|---------------|
 > | **PoC** | `qwen3:30b-a3b` (MoE Q4) | 12 GB GPU + 8 GB RAM | ~55s | 90.5% | Mais capaz, mas 44% transbordava para CPU |
 > | **Baseline** | `qwen2.5:7b-instruct-q4_K_M` | 100% GPU | ~7s | 90.5% | 8× mais rápido, mesma acurácia de routing |
-> | **Produção** | `qwen3.5-9b-orch` (LoRA) | 100% GPU | ~2-4s | 90.5% | Fine-tuned, +5pp em domínios, 14× mais rápido que PoC |
+> | **Produção** | `qwen3.5-9b-orch` (LoRA) | 100% GPU | ~2-4s | 93.7%* | Fine-tuned + roteamento multi-domínio e Knowledge Graph (Semiose); 14× mais rápido que PoC |
+>
+> *\*Medido no golden canonicalizado (63 casos) com decomposição multi-domínio e enriquecimento via Knowledge Graph (cap. 22). As fases PoC/Baseline foram medidas no golden anterior (44 casos) — por isso o salto reflete tanto o fine-tuning quanto a evolução do pipeline de roteamento, e não o modelo isoladamente.*
 >
 > **Lição:** O modelo mais capaz (30B MoE) era o pior para produção. O fine-tuning LoRA de um modelo 9B produziu o melhor equilíbrio entre latência, acurácia e custo de hardware. Esta jornada — escolher, medir, otimizar e especializar — é exatamente o que você aprenderá nos próximos capítulos.
 
