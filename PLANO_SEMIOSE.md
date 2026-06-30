@@ -332,8 +332,305 @@ neo4j:
 2. **Seed data automático** lendo JSONs dos microsserviços
 3. **Re-ranker no synthesize** para respostas de agentes multi-domínio
 4. **Spans Langfuse** (`enrich`, `rerank`, `graph_expand`) com latência e flags
+5. **Ontologias formais (OWL/RDF) sobre o Knowledge Graph** — evolução da Camada B
+6. **AI Gateway como Control Plane** — centralização de governança, segurança e observabilidade corporativa de IA
+7. **Prompt Caching** — cache semântico de respostas para reduzir latência e custo de tokens
+8. **Model Routing** — roteamento inteligente entre modelos (pequeno/médio/grande) por complexidade da query
+9. **ROI Mensurável de AI** — métricas de retorno financeiro sobre investimento em IA
+
+### 5. Ontologias Formais (OWL/RDF)
+
+O Knowledge Graph atual (`Neo4j`) é um **grafo de conhecimento**: entidades (`:Entity`, `:Produto`, `:Funcionario`) conectadas por relações (`:FORNECIDO_POR`, `:ABASTECE`, `:REQUER_APROVACAO`). Consultas são explícitas — o Cypher retorna exatamente o que o caminho define.
+
+**Ontologias formais** adicionam **inferência lógica automática** ao grafo:
+
+| Aspecto | Grafo atual (Neo4j) | Ontologia formal (OWL + Reasoner) |
+|---------|---------------------|-----------------------------------|
+| Consulta | Cypher explícito ("quais fornecedores do SKU X?") | Inferência implícita ("X é fornecedor" deduzido de "X abastece produto que compõe SKU Y") |
+| Relações | Diretas (aresta explícita) | Transitivas, simétricas, inversas (herdadas) |
+| Classes | Labels (`:Produto`, `:Fornecedor`) | Hierarquia com herança (`Monitor ⊂ Periférico ⊂ Produto`) |
+| Restrições | Não (só UNIQUE/INDEX) | Existenciais, cardinalidade ("todo Pedido tem ≥1 Produto") |
+| Regras de negócio | Vivem nas APIs (Python) | SWRL — podem viver no reasoner |
+
+#### Exemplo prático
+
+**Hoje (Neo4j):** para saber "este pedido pode ser aprovado?", o agente chama `expand_context` → recebe entidades relacionadas → o LLM interpreta as regras de negócio da API.
+
+**Com ontologia:** o reasoner inferiria automaticamente:
+```
+Monitor → subClassOf → Periférico → subClassOf → Produto
+Pedido(#42) → contem → Monitor(#7)
+Pedido(#42) → contem → Produto(#7)  ← inferido, não armazenado
+Fornecedor(X) → abastece → Produto(#7) → Fornecedor(X) → relacionado → Pedido(#42)
+```
+
+A consulta "quais fornecedores estão relacionados a este pedido?" retornaria `Fornecedor(X)` **sem aresta explícita** entre Fornecedor e Pedido — o reasoner deduziu a cadeia transitiva.
+
+#### Stack proposta
+
+| Componente | Opção | Justificativa |
+|------------|-------|---------------|
+| Formato | OWL 2 (Web Ontology Language) | Padrão W3C, interoperável |
+| Serialização | RDF/XML ou Turtle | Leitura humana (Turtle) + máquina (RDF/XML) |
+| Reasoner | [Owlready2](https://pypi.org/project/Owlready2/) (Python) ou [Apache Jena](https://jena.apache.org/) (Java) | Owlready2 integra direto com Python; Jena é mais robusto para escala |
+| Integração | Nova tool virtual `infer_context` no `ToolRegistry` | Mesmo padrão least-privilege da Camada B atual |
+| Seed | `scripts/seed_ontology.py` — exporta entidades/relações do Neo4j para OWL | Aproveita dados existentes |
+
+#### O que muda na prática
+
+- **Tool `expand_context`** (atual) → retorna vizinhos 1-hop do grafo
+- **Tool `infer_context`** (futura) → retorna relações **deduzidas** pelo reasoner (transitivas, herdadas, restrições violadas)
+- O agente pode escolher qual tool chamar baseado na complexidade da query
+
+#### Gate de validação
+
+| Métrica | Gate | Descrição |
+|---------|------|-----------|
+| Inference Precision@5 | ≥ 0.90 | Das 5 relações inferidas retornadas, quantas são semanticamente corretas |
+| Inference Recall | ≥ 0.70 | Das relações que **deveriam** ser inferidas, quantas o reasoner capturou |
+| Reasoner Latency | < 500ms | Tempo de inferência no owlready2 (síncrono) |
+
+#### Config
+
+```python
+# config.py
+ontology_enabled: bool = Field(default=False, env="ONTOLOGY_ENABLED")
+ontology_path: str = Field(default="ontologies/wabfy.owl", env="ONTOLOGY_PATH")
+ontology_reasoner: str = Field(default="owlready2", env="ONTOLOGY_REASONER")  # owlready2 | jena
+```
+
+#### Pré-requisitos
+
+- Camada B (Neo4j + Knowledge Graph) totalmente operacional
+- `pip install owlready2`
+- `scripts/seed_ontology.py` executado uma vez (exporta Neo4j → OWL)
+- Flag `ONTOLOGY_ENABLED=1`
+
+6. **AI Gateway como Control Plane** — centralização de governança, segurança e observabilidade
+7. **Prompt Caching** — cache semântico de respostas para reduzir latência e custo
+8. **Model Routing** — roteamento inteligente entre modelos (pequeno/grande) por complexidade da query
+9. **ROI Mensurável de AI** — métricas de retorno financeiro sobre investimento em IA
+
+### 6. AI Gateway como Control Plane
+
+O gateway atual (`FastAPI` na porta 8100) já centraliza roteamento, segurança e observabilidade. A evolução é formalizá-lo como **AI Gateway** — um control plane que gerencia **todo o tráfego de IA** da organização, não apenas o fluxo do orquestrador.
+
+Fonte: conceito de AI Gateway como "API Gateway especializado para modelos" — padrão emergente em plataformas como Kong AI Gateway, Cloudflare AI Gateway, Portkey.
+
+#### Funcionalidades propostas
+
+| Funcionalidade | O que faz | Estado atual | Arquivos |
+|---------------|-----------|-------------|----------|
+| **Rate limiting por modelo** | Cotas diferentes para LLM grande vs. pequeno vs. embeddings | Só IP-based (`RATE_LIMIT_PER_HOUR`) | `gateway/security.py` |
+| **Cost tracking por tenant** | Atribuir custo de tokens a projetos/departamentos | Não implementado | Novo: `gateway/cost_tracker.py` |
+| **Fallback chain** | Se modelo A falhar/timeout → tenta B → tenta C | Timeout simples (900s) | `gateway/llm.py`, `gateway/graph.py` |
+| **Shadow deployment** | Espelhar tráfego para modelo novo sem afetar produção | Não implementado | Novo: `gateway/shadow_router.py` |
+| **PII detection no gateway** | Bloquear/enviesar CPF, CNPJ, valores antes de chegar ao LLM | Parcial (injection regex) | `gateway/sanitize.py`, novo: `gateway/data_guard.py` |
+| **Audit log imutável** | Todas as requisições → storage append-only | Não implementado | Novo: `gateway/audit_log.py` |
+
+#### Config
+
+```python
+# config.py
+gateway_mode: str = Field(default="orchestrator", env="GATEWAY_MODE")  # orchestrator | control_plane
+cost_tracking_enabled: bool = Field(default=False, env="COST_TRACKING_ENABLED")
+shadow_model: str = Field(default="", env="SHADOW_MODEL")
+audit_log_path: str = Field(default="/var/log/ai-gateway/audit.jsonl", env="AUDIT_LOG_PATH")
+```
+
+#### Gate de validação
+
+| Métrica | Gate | Descrição |
+|---------|------|-----------|
+| PII Leak Rate | 0% | Nenhum dado sensível deve chegar ao LLM externo |
+| Shadow Accuracy Gap | < 5% | Modelo shadow não pode divergir >5% do produção |
+| Audit Completeness | 100% | Toda requisição deve gerar entrada de audit |
 
 ---
+
+### 7. Prompt Caching
+
+Cache semântico que evita chamadas redundantes ao LLM quando queries similares já foram respondidas. Diferente de cache HTTP tradicional (match exato), o **cache semântico** usa similaridade de cosseno para encontrar respostas pré-computadas para perguntas parafraseadas.
+
+Fonte: GPTCache (Zilliz, 2023), LangChain `CacheBackedEmbeddings`, Redis semantic caching.
+
+#### Funcionamento
+
+```
+query → embed → search Qdrant (cosine ≥ 0.97, same domains)
+  ├─ hit → retorna resposta cacheada (0 ms LLM, 0 tokens)
+  └─ miss → executa pipeline normal → armazena (query_embedding, resposta, domínios) no cache
+```
+
+#### Estratégia de invalidação
+
+| Gatilho | Ação |
+|---------|------|
+| Resposta com tool calls | Nunca cachear (dados mutáveis de API) |
+| TTL padrão | 1 hora (respostas factuais envelhecem) |
+| Invalidação por domínio | Se seed de dados do domínio X mudar, invalida todas as entradas com `domains` contendo X |
+| Cache miss forçado | Header `X-No-Cache: 1` do cliente |
+
+#### Economia projetada
+
+Com base nos 100 traces do Langfuse (P50 = 4.2s, P95 = 8.8s):
+
+| Cenário | Hit rate estimado | Latência P50 | Tokens/dia economizados |
+|---------|------------------|-------------|------------------------|
+| Sem cache | 0% | 4.2s | 0 |
+| Cache conservador (cosine ≥ 0.97) | ~15% | 2.1s (↓50% em hits) | ~67K (30% queries factuais) |
+| Cache agressivo (cosine ≥ 0.92) | ~35% | 1.8s | ~157K |
+
+#### Arquivos
+
+- Novo: `gateway/prompt_cache.py` — `PromptCache` class com Qdrant backend
+- Modificar: `gateway/graph.py` — `_classify` e `_synthesize` checkam cache antes do LLM
+
+#### Config
+
+```python
+# config.py
+prompt_cache_enabled: bool = Field(default=False, env="PROMPT_CACHE_ENABLED")
+prompt_cache_threshold: float = Field(default=0.97, env="PROMPT_CACHE_THRESHOLD")
+prompt_cache_ttl_minutes: int = Field(default=60, env="PROMPT_CACHE_TTL_MINUTES")
+prompt_cache_skip_tool_calls: bool = Field(default=True, env="PROMPT_CACHE_SKIP_TOOLS")
+```
+
+---
+
+### 8. Model Routing
+
+Roteamento inteligente que seleciona o modelo com base na **complexidade estimada da query**, não em um modelo fixo para todas as requisições. O objetivo é usar modelos pequenos (baratos, rápidos) para queries simples e reservar modelos grandes (caros, lentos) para queries complexas.
+
+Fonte: FrugalGPT (Chen et al., 2023), Model Cascading, speculative routing.
+
+#### Arquitetura
+
+```
+query → complexity_classifier (rápido, determinístico)
+  ├─ complexity = "simple"     → modelo pequeno (Qwen 1.5B, ~0.5s, ~R$0.0001)
+  ├─ complexity = "moderate"   → modelo médio (Qwen 9B LoRA, ~3s, ~R$0.003)
+  └─ complexity = "complex"    → modelo grande (Qwen 30B MoE ou API externa, ~15s, ~R$0.05)
+        └─ multi-domain, multi-hop, requer reasoning
+```
+
+#### Classificador de complexidade (determinístico)
+
+| Sinal | Peso | Exemplo |
+|-------|------|---------|
+| Número de domínios (lexical) | +2 por domínio extra | "RH e finanças" → moderate |
+| Presença de entidades cross-domain | +1 por entidade | SKU + fornecedor + funcionário → complex |
+| Palavras de reasoning | +1 cada | "por que", "explique", "compare", "qual o impacto" |
+| Comprimento da query | +1 se > 100 chars | Query longa → investigativa |
+| Histórico multi-turn | +2 | Turn 3+ no mesmo tópico |
+
+**Thresholds:**
+- score ≤ 2 → `simple`
+- score 3–5 → `moderate`
+- score ≥ 6 → `complex`
+
+#### Fallback e segurança
+
+- Se modelo pequeno falhar/timeout → sobe para médio
+- Se modelo médio falhar → sobe para grande
+- Rate limit por tier: simple (ilimitado), moderate (200/h), complex (50/h)
+- Métrica: `model_route_accuracy` — % de vezes que o classifier acertou a complexidade (avaliado contra eval set)
+
+#### Economia projetada
+
+Com 100 traces/dia e distribuição estimada 60% simple, 30% moderate, 10% complex:
+
+| Estratégia | Custo diário | Latência média |
+|------------|-------------|---------------|
+| Modelo único (9B LoRA) | R$0.30 | 4.2s |
+| Model routing | R$0.08 (↓73%) | 2.1s (↓50%) |
+
+#### Arquivos
+
+- Novo: `gateway/model_router.py` — `ModelRouter` com `ComplexityClassifier` + cascade
+- Modificar: `gateway/config.py` — tiers e thresholds
+
+#### Config
+
+```python
+# config.py
+model_routing_enabled: bool = Field(default=False, env="MODEL_ROUTING_ENABLED")
+model_simple: str = Field(default="qwen2.5:1.5b", env="MODEL_SIMPLE")
+model_moderate: str = Field(default="qwen3.5-9b-orch", env="MODEL_MODERATE")
+model_complex: str = Field(default="qwen3:30b", env="MODEL_COMPLEX")
+model_routing_threshold_moderate: int = Field(default=3, env="MODEL_ROUTING_THRESHOLD_MODERATE")
+model_routing_threshold_complex: int = Field(default=6, env="MODEL_ROUTING_THRESHOLD_COMPLEX")
+```
+
+---
+
+### 9. ROI Mensurável de AI
+
+Framework para quantificar o retorno financeiro do investimento em IA, respondendo a pergunta que stakeholders fazem: **"quanto estamos economizando com IA vs. processo manual?"**
+
+#### Fórmula base
+
+```
+ROI_mensal = (horas_manual_evitadas × custo_hora_humano) − (custo_infra_gpu + custo_tokens + custo_manutencao)
+```
+
+#### Métricas rastreáveis (já parcialmente implementadas)
+
+| Métrica | Cálculo | Fonte atual | Fonte futura |
+|---------|---------|-------------|-------------|
+| **Cost-per-Task** | (GPU watt-horas × R$/kWh) + (tokens × R$/1K tokens) | `observability.py` (estimado) | Langfuse tracing real |
+| **Horas manuais evitadas** | N queries respondidas × tempo médio de resolução manual | Não implementado | `gateway/roi_tracker.py` |
+| **Task Success Rate** | % de agent runs que terminam com resposta definitiva | `observability.py` (94.2% estimado) | Métrica real via Langfuse |
+| **Tempo médio de resolução** | Latência end-to-end do gateway | `metrics.py` (Langfuse live) | Já implementado |
+| **Custo de infraestrutura** | GPU + energia + cloud + licenças | Não consolidado | Dashboard de ROI |
+| **Re-trabalho evitado** | % de tarefas que precisariam de 2+ interações humanas | Não implementado | Proxy: `clarification_rate` |
+
+#### Dashboard de ROI (nova seção no frontend)
+
+| Seção | O que mostra |
+|-------|-------------|
+| **Economia mensal** | R$ X (horas evitadas × R$50/h − custo infra) |
+| **Payback do investimento** | Em quantos meses o setup se pagou |
+| **Custo por query** | R$ X (breakdown: GPU + tokens + overhead) |
+| **Projeção** | Se volume crescer 2×, custo marginal vs. custo de contratar |
+| **Comparativo** | Custo IA vs. custo humano equivalente (headcount evitado) |
+
+#### Premissas (configuráveis, documentadas)
+
+```python
+# config.py — premissas de ROI (defaults de mercado brasileiro)
+roi_cost_per_hour_human: float = Field(default=50.0, env="ROI_COST_HOUR_HUMAN")  # R$/hora
+roi_cost_per_kwh: float = Field(default=0.70, env="ROI_COST_KWH")  # R$/kWh
+roi_gpu_watt: float = Field(default=200.0, env="ROI_GPU_WATT")  # RTX 3060 TDP
+roi_manual_minutes_per_task: float = Field(default=5.0, env="ROI_MANUAL_MINUTES")  # Minutos humanos por tarefa
+roi_maintenance_monthly: float = Field(default=100.0, env="ROI_MAINTENANCE")  # R$/mês manutenção
+```
+
+#### Gate de validação
+
+| Métrica | Gate | Descrição |
+|---------|------|-----------|
+| ROI positivo em 6 meses | Payback ≤ 6 meses | O investimento se paga em meio ano |
+| Custo por query < R$0.01 | Threshold de viabilidade | Abaixo disso, custo é irrelevante vs. humano |
+| Task Success > 90% | Qualidade mínima | Se < 90%, retrabalho humano anula economia |
+
+#### Exemplo real (AI-Orchestrator, dados atuais)
+
+```
+Queries/mês:       ~300 (estimado)
+Horas manuais:     300 × 5 min = 25h/mês
+Custo humano:      25h × R$50 = R$1.250/mês
+Custo infra GPU:   ~R$50/mês (energia)
+Custo manutenção:  ~R$100/mês
+ROI mensal:        R$1.250 − R$150 = R$1.100/mês
+Payback:           ~1 mês (setup inicial ~R$1.000 em HW)
+```
+
+#### Arquivos
+
+- Novo: `gateway/roi_tracker.py` — coleta métricas de custo/tempo e calcula ROI
+- Novo: `frontend/src/components/RoiDashboard.tsx` — seção de ROI no frontend
+- Modificar: `gateway/observability.py` — adicionar pilar "ROI" com métricas financeiras
 
 ## Desvios Arquiteturais da Implementação Real
 
