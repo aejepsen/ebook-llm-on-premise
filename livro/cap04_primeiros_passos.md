@@ -442,6 +442,8 @@ No próximo capítulo, vamos mergulhar na **quantização** -- a técnica que to
 >
 > *\*Medido no golden canonicalizado (63 casos) com decomposição multi-domínio e enriquecimento via Knowledge Graph (cap. 22). As fases PoC/Baseline foram medidas no golden anterior (44 casos) — por isso o salto reflete tanto o fine-tuning quanto a evolução do pipeline de roteamento, e não o modelo isoladamente.*
 >
+> *Atualização (2026-07-02): o golden foi depois expandido para **153 casos** multi-domínio (golden denso), no qual o LoRA 9B partia de 72,5%; guards determinísticos + regras de decomposição no prompt levaram a 91,5% (gate 90%), e a auditoria de labels do golden fechou em **94,1%** (ver cap. 12). Os 93,7% acima são o registro histórico no golden de 63 — goldens diferentes não são comparáveis entre si.*
+>
 > **Lição:** O modelo mais capaz (30B MoE) era o pior para produção. O fine-tuning LoRA de um modelo 9B produziu o melhor equilíbrio entre latência, acurácia e custo de hardware. Esta jornada — escolher, medir, otimizar e especializar — é exatamente o que você aprenderá nos próximos capítulos.
 
 ---

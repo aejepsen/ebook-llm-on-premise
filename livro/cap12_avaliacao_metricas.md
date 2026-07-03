@@ -264,6 +264,8 @@ O modelo LoRA é promovido para produção **apenas se**:
 3. Resultados são **consistentes** em pelo menos 2 runs (eliminando variância da geração)
 
 > **No AI-Orchestrator**: o modelo LoRA passou nos 3 gates e foi promovido para produção com `.env MODEL=qwen3.5-9b-orch`. Após canonicalizar o golden (63 casos) e ativar a decomposição multi-domínio + enriquecimento via Knowledge Graph (cap. 22), o roteamento estabilizou em **93,7% (59/63)** — medição repetida em 4 runs consecutivos com resultado idêntico, eliminando a variância da geração.
+>
+> **Atualização (2026-07-02)**: o golden foi expandido para **153 casos** multi-domínio (golden denso), que expôs sub-roteamento que o golden de 63 escondia — o LoRA partia de 72,5%. *Guards* determinísticos + regras de decomposição no prompt levaram a **91,5% PASS** (gate 90%); a auditoria de labels do golden (critérios explícitos em `docs/golden_routing_criteria.md`, 8 labels inconsistentes normalizados) fechou em **94,1%**, com injection reconfirmado 0/6 em cada etapa. Duas lições: expandir o golden é trocar de instrumento (números entre goldens não são comparáveis, por isso o histórico fica registrado) e o golden também erra — auditar labels com critérios públicos e versionados é parte do trabalho de avaliação.
 
 ### Watchdog de avaliação
 
