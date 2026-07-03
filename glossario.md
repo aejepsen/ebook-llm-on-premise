@@ -68,6 +68,8 @@
 
 **Harness:** Todo o código que envolve o LLM: prompts, ferramentas, memória, roteamento, validação, controle de fluxo. Termo do framework ADD.
 
+**HITL (Human-In-The-Loop):** Padrão arquitetural onde o agente pausa a execução autônoma (ex: via `interrupt()` do LangGraph) para solicitar aprovação humana antes de operações críticas ou de escrita.
+
 **HNSW (Hierarchical Navigable Small World):** Algoritmo de busca aproximada de vizinhos mais próximos usado em bancos vetoriais.
 
 ## I
@@ -94,6 +96,8 @@
 
 **MCP (Model Context Protocol):** Protocolo para conectar agentes a ferramentas e fontes de dados externas.
 
+**Metodologia dos 5 Gates:** Framework rigoroso de testes adotado no AI-Orchestrator para validar *deploys* de novos modelos (Roteamento, Fidelidade/Faithfulness, Injeção/Segurança, OOD Guard e Estabilidade Funcional).
+
 **Model vs Harness:** Distinção fundamental do ADD — o Model (LLM) raciocina e gera; o Harness (código) estrutura, valida e controla.
 
 **MoE (Mixture of Experts):** Arquitetura onde apenas uma fração dos parâmetros é ativada por token. Modelos MoE (ex: Qwen3 30B-A3B) têm muitos parâmetros totais mas uso eficiente de computação.
@@ -103,6 +107,8 @@
 **Ollama:** Ferramenta para rodar LLMs localmente com um comando. Abstrai download, quantização e serving via API REST.
 
 **On-Premise:** Infraestrutura executada localmente, sem dependência de serviços cloud.
+
+**OOD Guard (Out-of-Distribution Guard):** Mecanismo de segurança que detecta requisições fora do domínio de conhecimento do sistema (como ruído ou anomalias). O AI-Orchestrator utiliza SVD para implementar esta proteção.
 
 ## P
 
@@ -138,6 +144,8 @@
 
 **Semantic Router:** Roteador que classifica a intenção do usuário usando similaridade de embeddings, com fallback para LLM classifier.
 
+**Subspace Guard (SVD):** Abordagem geométrica para a proteção *OOD Guard*. Utiliza Decomposição em Valores Singulares (SVD) para calcular o subespaço principal do domínio e rejeita comandos baseando-se em sua distância ortogonal (resíduo).
+
 **Semiose (engenharia):** No AI-Orchestrator, conjunto de três técnicas de construção/preservação de significado num pipeline de IA — enriquecimento contextual da query (Camada A), grafo de conhecimento para relações cross-domínio (Camada B) e re-ranking contextual (Camada C). Termo emprestado da semiótica, mas tratado de forma operacional (cap. 22). Ver `PLANO_SEMIOSE.md`.
 
 **Contextual Retrieval:** Técnica que anexa contexto a um trecho antes de vetorizá-lo, reduzindo falhas de recuperação causadas pela perda de contexto no chunking (Anthropic, 2024). Inspira a Camada A da Semiose.
@@ -152,7 +160,11 @@
 
 **TensorRT-LLM:** Framework de inferência da NVIDIA otimizado para GPUs NVIDIA, com suporte a FP8, inflight batching e kernels customizados.
 
+**Throughput:** Número de requisições completas que o sistema processa por unidade de tempo sob carga. Diferente do TPS (velocidade por request), esta é a métrica máxima de escalabilidade sistêmica.
+
 **Tool Calling:** Ver Function Calling.
+
+**Tool Registry:** Padrão arquitetural (usado no AI-Orchestrator) para descoberta automática e registro dinâmico de ferramentas de agentes através da leitura de esquemas OpenAPI dos microsserviços.
 
 **TPS (Tokens Per Second):** Métrica de velocidade de geração. 30-100 tok/s local (GPU), 5-15 tok/s (CPU).
 

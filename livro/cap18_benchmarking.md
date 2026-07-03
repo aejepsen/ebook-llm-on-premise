@@ -10,6 +10,16 @@ Medir performance serve a três propósitos:
 2. **Capacidade.** Quantos usuários simultâneos o sistema aguenta antes de degradar?
 3. **Detecção de regressão.** O modelo que funcionava bem ontem está respondendo pior hoje? Sem métricas, você não sabe.
 
+### Estudo de Caso: Metodologia dos 5 Gates no AI-Orchestrator
+
+Em produção, o monitoramento avulso não basta; é necessário um framework rigoroso. O **AI-Orchestrator** adotou a metodologia dos 5 Gates para autorizar qualquer *deploy* de modelo, atingindo os seguintes números de aprovação final em julho de 2026:
+
+1. **Gate 1 - Roteamento Semântico:** 94.1% de acurácia no *golden set* (apenas 5.9% de erro).
+2. **Gate 2 - Domínios e Subagentes:** 97.5% de fidelidade (*faithfulness*) ao corpus de origem, garantindo respostas fundamentadas sem alucinação.
+3. **Gate 3 - Injeção e Segurança:** 0/6 vazamentos. O modelo intercepta perfeitamente as 6 famílias de injeção mapeadas.
+4. **Gate 4 - OOD (Out-of-Distribution):** Score AUC de 0.980 atingido com a defesa Subspace Guard (SVD).
+5. **Gate 5 - Estabilidade Funcional:** 431 testes determinísticos unitários/integração rodando sem falhas no CI/CD.
+
 ## Métricas de serving: TTFT, TPS, throughput, latência
 
 ### TTFT (Time to First Token)

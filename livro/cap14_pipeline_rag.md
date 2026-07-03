@@ -48,8 +48,8 @@ Cada modelo de embedding produz vetores de tamanho fixo. Modelos comuns:
 
 | Modelo | Dimensão | Tamanho | Observação |
 |--------|----------|---------|------------|
-| `nomic-embed-text` | 768 | ~274 MB | Excelente custo-benefício para on-premise. Usado no AI-Orchestrator. |
-| `all-MiniLM-L6-v2` | 384 | ~80 MB | Leve, rápido, bom para prototipação. |
+| `mxbai-embed-large` | 1024 | ~670 MB | Forte desempenho geral, otimizado para retrieval pesado. |
+| `paraphrase-multilingual-MiniLM-L12-v2` (SBERT) | 384 | ~470 MB | Rápido, leve e excelente para português. **Usado no AI-Orchestrator em produção.** |
 | `bge-large-en-v1.5` | 1024 | ~1.3 GB | Alta qualidade, mais pesado. |
 | `mxbai-embed-large` | 1024 | ~670 MB | Forte em benchmarks MTEB. |
 | `snowflake-arctic-embed` | 1024 | ~1.1 GB | Destaque recente em retrieval. |
@@ -214,7 +214,7 @@ import httpx
 OLLAMA_URL = "http://localhost:11434"
 QDRANT_URL = "http://localhost:6333"
 COLECAO = "documentos_rag"
-MODELO_EMBED = "nomic-embed-text"
+MODELO_EMBED = "paraphrase-multilingual-MiniLM-L12-v2"  # ou nomic-embed-text via Ollama
 DIMENSAO = 768
 
 def gerar_embeddings(textos: list[str]) -> list[list[float]]:
@@ -286,7 +286,7 @@ import httpx
 OLLAMA_URL = "http://localhost:11434"
 QDRANT_URL = "http://localhost:6333"
 COLECAO = "documentos_rag"
-MODELO_EMBED = "nomic-embed-text"
+MODELO_EMBED = "paraphrase-multilingual-MiniLM-L12-v2"
 MODELO_CHAT = "qwen2.5:7b"
 TOP_K = 5  # quantidade de chunks a recuperar
 

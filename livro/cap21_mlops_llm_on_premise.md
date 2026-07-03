@@ -268,7 +268,7 @@ ACCESS_TOKEN=             # Bearer token do /chat. Vazio = aberto (dev)
 INTERNAL_API_KEY=         # HMAC entre gateway e microsserviços (obrigatório)
 
 # === Modelo ===
-MODEL=qwen2.5:7b-instruct-q4_K_M   # Modelo Ollama (tag ou digest)
+MODEL=qwen3.5-9b-orch-q4_K_M   # Modelo Ollama (tag ou digest)
 
 # === Semantic Router ===
 QDRANT_API_KEY=           # API key do Qdrant (obrigatório)

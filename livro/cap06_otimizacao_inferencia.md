@@ -10,9 +10,9 @@ Para entender o KV cache, você precisa entender como um Transformer gera texto.
 
 ### O problema
 
-Quando um modelo Transformer gera o token N+1, ele precisa calcular a **atenção** (attention) sobre todos os N tokens anteriores. O mecanismo de atenção usa tres vetores por token: **Query (Q)**, **Key (K)** e **Value (V)**.
+Quando um modelo Transformer gera o token N+1, ele precisa calcular a **atenção** (attention) sobre todos os N tokens anteriores. O mecanismo de atenção usa três vetores por token: **Query (Q)**, **Key (K)** e **Value (V)**.
 
-Sem cache, a cada novo token o modelo recalcula K e V para **todos** os tokens anteriores. Se você está no token 1000, o modelo recalcula 999 pares K,V que já foram calculados antes. Isso é um desperdicio enorme.
+Sem cache, a cada novo token o modelo recalcula K e V para **todos** os tokens anteriores. Se você está no token 1000, o modelo recalcula 999 pares K,V que já foram calculados antes. Isso é um desperdício enorme.
 
 ### A solução: KV Cache
 
@@ -34,7 +34,7 @@ Com KV cache (token 1000):
 
 ### Quanto de memória o KV cache consome
 
-A formula para estimar o consumo de memória do KV cache:
+A fórmula para estimar o consumo de memória do KV cache:
 
 ```
 KV Cache (bytes) = 2 x num_camadas x num_kv_heads x dim_head x seq_len x bytes_por_elem
@@ -50,25 +50,25 @@ KV Cache para 4096 tokens = 2 x 32 x 8 x 128 x 4096 x 2 bytes
                           ≈ 512 MB
 ```
 
-**Isso é por requisicao.** Se você tem 10 usuarios simultaneos com contexto de 4096 tokens, o KV cache sozinho consome ~5 GB. Com 100 usuarios, ~50 GB -- por isso o gerenciamento de memória do KV cache (Paged Attention, prefix caching) e tao critico em produção.
+**Isso é por requisição.** Se você tem 10 usuários simultâneos com contexto de 4096 tokens, o KV cache sozinho consome ~5 GB. Com 100 usuários, ~50 GB -- por isso o gerenciamento de memória do KV cache (Paged Attention, prefix caching) é tão crítico em produção.
 
 ---
 
 ## 6.2 Paged Attention (vLLM) -- gerenciamento inteligente de memória
 
-O KV cache cria um problema classico de alocação de memória: cada requisicao precisa de um bloco contiguo de memória, mas o tamanho final da resposta e desconhecido antecipadamente.
+O KV cache cria um problema clássico de alocação de memória: cada requisição precisa de um bloco contíguo de memória, mas o tamanho final da resposta é desconhecido antecipadamente.
 
 ### O problema da alocação tradicional
 
-Sem Paged Attention, o sistema precisa alocar memória para o comprimento **máximo** possível de cada requisicao:
+Sem Paged Attention, o sistema precisa alocar memória para o comprimento **máximo** possível de cada requisição:
 
 ```
-Requisicao A: prompt=100 tokens, resposta real=50 tokens
+Requisição A: prompt=100 tokens, resposta real=50 tokens
   Alocado: 4096 tokens (maximo do contexto)
-  Desperdicado: 3946 tokens = 96% de desperdicio!
+  Desperdiçado: 3946 tokens = 96% de desperdício!
 ```
 
-Multiplique isso por dezenas de requisicoes simultaneas e a GPU fica cheia de memória desperdicada.
+Multiplique isso por dezenas de requisições simultâneas e a GPU fica cheia de memória desperdiçada.
 
 ### A solução: Paged Attention
 
@@ -89,12 +89,12 @@ Tabela de paginas:
 
 Benefícios:
 
-1. **Sem fragmentação:** páginas não precisam ser contiguas
+1. **Sem fragmentação:** páginas não precisam ser contíguas
 2. **Alocação sob demanda:** páginas são alocadas conforme o modelo gera tokens, não antecipadamente
-3. **Compartilhamento de memória:** requisicoes com o mesmo prefixo (ex: system prompt) podem compartilhar páginas -- técnica chamada **prefix caching**
-4. **Throughput 2-4x maior:** menos memória desperdicada = mais requisicoes simultaneas
+3. **Compartilhamento de memória:** requisições com o mesmo prefixo (ex: system prompt) podem compartilhar páginas -- técnica chamada **prefix caching**
+4. **Throughput 2-4x maior:** menos memória desperdiçada = mais requisições simultâneas
 
-O Paged Attention foi introduzido pelo paper do vLLM (Kwon et al., 2023) e se tornou o padrão da industria. Hoje, além do vLLM, frameworks como SGLang e TensorRT-LLM implementam variações dessa técnica.
+O Paged Attention foi introduzido pelo paper do vLLM (Kwon et al., 2023) e se tornou o padrão da indústria. Hoje, além do vLLM, frameworks como SGLang e TensorRT-LLM implementam variações dessa técnica.
 
 ---
 

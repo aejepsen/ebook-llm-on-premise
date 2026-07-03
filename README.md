@@ -37,6 +37,7 @@ Livro prático de AI Engineering para iniciantes — do zero ao deploy de modelo
 20. [Segurança e governança de LLMs locais](livro/cap20_seguranca_governanca.md)
 21. [MLOps para LLMs On-Premise](livro/cap21_mlops_llm_on_premise.md)
 22. [Semiose aplicada: construção de significado em pipelines de IA](livro/cap22_semiose_aplicada.md)
+23. [Roadmap de evolução: do Mínimo Viável à Produção](livro/cap23_roadmap_evolucao.md)
 
 ### Referências
 - [Bibliografia e fontes](referencias/bibliografia.md)

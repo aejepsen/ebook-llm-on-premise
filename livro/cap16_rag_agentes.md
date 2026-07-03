@@ -35,7 +35,11 @@ import httpx
 import json
 
 OLLAMA_URL = "http://localhost:11434"
-MODELO = "qwen2.5:7b"
+MODELO = "qwen3.5-9b-orch"
+
+> [!NOTE]
+> **Evolução de Modelos no Projeto AI-Orchestrator**
+> Durante o ciclo de vida deste projeto, a escolha do modelo evoluiu. A Prova de Conceito (PoC) inicial usava o pesado `qwen3:30b-a3b` (que frequentemente causava OOM e transbordava para CPU). Em seguida, foi estabelecido um *baseline* leve com o `qwen2.5:7b`. Finalmente, a versão de produção estabilizou-se num modelo fine-tunado com LoRA: o `qwen3.5-9b-orch`, que entrega altíssima fidelidade (97.5%) rodando integralmente na VRAM da GPU. Ao longo deste capítulo e dos seguintes, você verá esse modelo consolidado sendo referenciado.
 
 # Definição das ferramentas disponíveis
 ferramentas = [

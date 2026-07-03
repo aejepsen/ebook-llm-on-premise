@@ -515,8 +515,8 @@ def confirmar_despacho(estado: EstadoGrafo) -> EstadoGrafo:
     plano = estado["route"]["plan"]
 
     # Decisão: auto-aprovar ou pausar?
-    # No AI-Orchestrator, HITL é desabilitado por padrão e ativado
-    # apenas quando há detecção confiável de write intent.
+    # No AI-Orchestrator, HITL é controlado pela flag global do Docker Compose
+    # (HITL_ENABLED=true) combinada com detecção heurística de escrita.
     if not precisa_confirmacao(dominios, plano):
         return {}  # auto-aprovado, continua o fluxo
 
@@ -534,7 +534,11 @@ def confirmar_despacho(estado: EstadoGrafo) -> EstadoGrafo:
     return {}
 
 def precisa_confirmacao(dominios: list[str], plano: str) -> bool:
-    """Heurística: operações de escrita precisam de confirmação."""
+    """Heurística: operações de escrita precisam de confirmação, se ativado."""
+    import os
+    if os.environ.get("HITL_ENABLED", "false").lower() != "true":
+        return False
+
     palavras_escrita = ["criar", "incluir", "atualizar", "excluir", "deletar", "aprovar"]
     plano_lower = plano.lower()
     return any(p in plano_lower for p in palavras_escrita)

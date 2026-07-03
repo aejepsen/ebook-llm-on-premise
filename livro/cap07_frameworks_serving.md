@@ -1,6 +1,6 @@
 # Capítulo 7 -- Frameworks de Serving: Escolhendo a Ferramenta Certa
 
-Você já entende quantização, KV cache, Paged Attention e speculative decoding. Agora a pergunta e: **qual framework implementa tudo isso da melhor forma para o seu cenario?** Este capítulo compara os cinco frameworks mais relevantes para servir LLMs localmente: Ollama, vLLM, llama.cpp, SGLang e TensorRT-LLM. Cada um tem forcas distintas e contextos ideais de uso.
+Você já entende quantização, KV cache, Paged Attention e speculative decoding. Agora a pergunta é: **qual framework implementa tudo isso da melhor forma para o seu cenário?** Este capítulo compara os cinco frameworks mais relevantes para servir LLMs localmente: Ollama, vLLM, llama.cpp, SGLang e TensorRT-LLM. Cada um tem forças distintas e contextos ideais de uso.
 
 ---
 
@@ -428,7 +428,7 @@ services:
               count: 1
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,12 +1,12 @@
 # Capítulo 4 -- Primeiros Passos com LLMs Locais
 
-Até aqui você já entende o que são LLMs, por que roda-los localmente e qual hardware precisa. Agora e hora de colocar a mão na massa. Neste capítulo, você vai baixar seu primeiro modelo, conversar com ele pelo terminal, consumir sua API REST e construir um chatbot simples em Python. Tudo rodando na sua maquina, sem depender de nenhum serviço na nuvem.
+Até aqui você já entende o que são LLMs, por que rodá-los localmente e qual hardware precisa. Agora é a hora de colocar a mão na massa. Neste capítulo, você vai baixar seu primeiro modelo, conversar com ele pelo terminal, consumir sua API REST e construir um chatbot simples em Python. Tudo rodando na sua máquina, sem depender de nenhum serviço na nuvem.
 
 ---
 
 ## 4.1 Baixando seu primeiro modelo com Ollama
 
-O Ollama e a forma mais simples de rodar LLMs localmente. Com um único comando, ele baixa o modelo, configura o runtime e expoe uma API REST. Pense nele como o "Docker dos LLMs".
+O Ollama é a forma mais simples de rodar LLMs localmente. Com um único comando, ele baixa o modelo, configura o runtime e expõe uma API REST. Pense nele como o "Docker dos LLMs".
 
 Depois de instalar o Ollama (veja o Capítulo 3), abra o terminal e execute:
 
@@ -196,7 +196,14 @@ curl http://localhost:11434/api/embed -d '{
 }'
 ```
 
-A resposta contém um vetor numerico (embedding) que representa o significado semântico do texto. Esses vetores podem ser armazenados em bancos vetoriais como Qdrant, ChromaDB ou Milvus.
+A resposta contém um vetor numérico (embedding) que representa o significado semântico do texto. Esses vetores podem ser armazenados em bancos vetoriais como Qdrant, ChromaDB ou Milvus.
+
+### 4.5.4 Streaming e Server-Sent Events (SSE)
+
+Em produção (como no gateway do AI-Orchestrator), as chamadas para o Ollama frequentemente ativam o `"stream": true`. Isso retorna os tokens em tempo real usando Server-Sent Events (SSE). 
+
+> [!TIP]
+> **Padrão SSE Heartbeat:** Para evitar encerramentos prematuros de conexão por *timeouts* em gateways reversos ou balanceadores de carga, aplicações robustas enviam eventos de *heartbeat* (ou keep-alive) regulares durante o streaming, mesmo antes do primeiro token útil ser gerado, garantindo que o socket permaneça aberto durante latências de inferência iniciais longas.
 
 ---
 
