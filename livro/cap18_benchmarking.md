@@ -264,10 +264,12 @@ A regra: Q4_K_M é o ponto de partida. Suba para Q8 apenas se os evals mostrarem
 
 | Framework | Strengths | Batching | Quando usar |
 |-----------|----------|----------|-------------|
-| **Ollama** | Simples, integrado | Não | Dev, PoC, equipe pequena |
+| **Ollama** | Simples, integrado | Limitado (`OLLAMA_NUM_PARALLEL`) | Dev, PoC, equipe pequena |
 | **vLLM** | Continuous batching, PagedAttention | Sim | Produção com múltiplos usuários |
 | **llama.cpp server** | Leve, controle fino | Limitado | Recursos restritos |
 | **TGI (HuggingFace)** | Ecossistema HF | Sim | Se já usa HuggingFace |
+
+**Caso medido (AI-Orchestrator, RTX 3060 12 GB, 2026-07-04):** no fan-out multi-domínio, 3 agentes chamam o mesmo modelo em paralelo. Com `OLLAMA_NUM_PARALLEL=3` os pesos são compartilhados (5.4 GB, Q4_K_M) e só o KV cache multiplica (~8.5 GB total); `OLLAMA_FLASH_ATTENTION=1` acelera o prefill (prompts de agente com 2–3k tokens) e encolhe o KV cache. Resultado medido: makespan de 3 domínios caiu de 23.3s para 19.5s (−16%), com VRAM em 6.3/12 GB. O gargalo restante não é decodificação — é prefill + a síntese final, que é sequencial por natureza. É o método deste capítulo na prática: mudar um knob por vez, medir, e deixar o número decidir.
 
 ## Monitoramento em produção: Langfuse, Prometheus, Grafana
 

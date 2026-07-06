@@ -547,6 +547,23 @@ except Exception:
     return self._empty_metrics()
 ```
 
+### OTel GenAI: segunda fonte, independente do vendor
+
+Depender de um único backend de observabilidade é um risco. Em 2026-07 o AI-Orchestrator ganhou uma segunda camada, baseada em padrão aberto: instrumentação manual seguindo as **GenAI Semantic Conventions** do OpenTelemetry (`gateway/otel.py`). Cada chamada LLM vira um span `gen_ai.*` (`gen_ai.request.model`, `gen_ai.usage.*`, `gen_ai.response.finish_reasons`) e alimenta três histogramas:
+
+| Métrica OTel | O que mede |
+|--------------|------------|
+| `gen_ai.client.token.usage` | Tokens por chamada, por tipo (input/output) |
+| `gen_ai.client.operation.duration` | Duração da operação GenAI |
+| `gen_ai.server.time_to_first_token` | TTFT no streaming — a métrica que o usuário sente |
+
+Tudo sai via OTLP HTTP para um **OTel Collector** (`otel-collector-config.yaml`), que faz fan-out: traces → **Phoenix** (UI de traces LLM), métricas → exporter **Prometheus** (`:8889`), que o gateway raspa em `/metrics` como fonte independente do Langfuse. Mesmo padrão de degradação graceful: `OTEL_ENABLED=0`, SDK ausente ou Collector fora do ar → instrumentação vira no-op; o request nunca falha por causa da observabilidade.
+
+Duas lições de produção dessa rodada:
+
+1. **Tokens na fonte.** O dashboard mostrava `tokens=0` — a causa-raiz era que classificação e agentes chamavam o LLM fora de um trace, então as generations nunca chegavam ao Langfuse. A correção lê o usage real do Ollama (`prompt_eval_count`/`eval_count`) no ponto da chamada e propaga o trace por todo o grafo. Moral: instrumente onde o dado nasce, não onde ele é exibido.
+2. **Toda métrica declara a fonte.** O dashboard de evals passou a rotular cada métrica como `live` (derivada de traces reais), `eval` (golden set, com data da rodada) ou `estimate` — e cada framework exibe apenas métricas que mede nativamente. Faithfulness, por exemplo, lê o resultado real do eval (97.5%) em vez de um valor fixo. Sem isso, número bonito no dashboard é só decoração.
+
 ---
 
 ## Etapa 6: Segurança em runtime
@@ -915,5 +932,5 @@ O gap para produção é claro e quantificável: CI/CD automatizado, model regis
 
 ## Referências
 
-- Projeto AI-Orchestrator — `gateway/tracing.py` (Langfuse observability), `gateway/metrics.py` (MetricsCollector com cache 30s), `gateway/eval_results.py` (EvalResultsCollector), `gateway/security.py` (AccessTokenGuard + RateLimiter + client_ip), `gateway/tools/circuit.py` (CircuitBreaker).
+- Projeto AI-Orchestrator — `gateway/tracing.py` (Langfuse observability), `gateway/otel.py` (OTel GenAI semconv + OTLP) e `otel-collector-config.yaml` (Collector com fan-out Phoenix/Prometheus), `gateway/metrics.py` (MetricsCollector com cache), `gateway/eval_results.py` (EvalResultsCollector), `gateway/security.py` (AccessTokenGuard + RateLimiter + client_ip), `gateway/tools/circuit.py` (CircuitBreaker).
 - Arsanjani, A. & Bustos, J.P. (2026). *Agentic Architectural Patterns for Building Multi-Agent Systems: Proven design patterns and practices for GenAI, agents, RAG*. Packt Publishing. Caps. 7 (Robustness: Canary Agent Testing, Trust Decay and Scoring, Rate-Limited Invocation, Fallback Model Invocation), 11 (Advanced Adaptation: Self-Improvement Flywheel, R⁵ Model, Cost Management and Tokenomics, Measuring Business Value/ROI).
